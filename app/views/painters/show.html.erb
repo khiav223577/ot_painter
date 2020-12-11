@@ -25,7 +25,15 @@
   function DrawToolPencil() {
     let currentPos
 
+    const drawCalls = []
+
     function draw(ctx, fromPos, toPos) {
+      const diffX = toPos.x - fromPos.x
+      const diffY = toPos.y - fromPos.y
+      if (diffX === 0 && diffY === 0) return
+
+      drawCalls.push([diffX, diffY])
+
       ctx.save();
       ctx.beginPath();
       ctx.lineCap = "round";
@@ -37,7 +45,10 @@
     }
 
     return {
-      onMouseDown: (ctx, cursorPos) => { currentPos = cursorPos },
+      onMouseDown: (ctx, cursorPos) => {
+        currentPos = cursorPos
+        drawCalls.push([cursorPos.x, cursorPos.y])
+      },
       onMouseMove: (ctx, cursorPos) => {
         draw(ctx, currentPos, cursorPos)
         currentPos = cursorPos
@@ -53,7 +64,7 @@
     const drawingToolRef = React.useRef(null)
 
     function calculatePos(e) {
-      return { x: e.clientX - canvasBBox.x, y: e.clientY - canvasBBox.y }
+      return { x: Math.round(e.clientX - canvasBBox.x), y: Math.round(e.clientY - canvasBBox.y) }
     }
 
     function onMouseDown(e) {
