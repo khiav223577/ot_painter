@@ -1,0 +1,16 @@
+<h3>Painter Demo</h3>
+
+<script type="text/babel">
+  const cable = ActionCable.createConsumer()
+
+  function Painter(props) {
+    return (
+      "Hello, World!"
+    )
+  }
+
+  ReactDOM.render(
+    <Painter />,
+    document.getElementById('root'),
+  )
+</script>
