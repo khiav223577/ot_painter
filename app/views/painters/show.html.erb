@@ -3,9 +3,64 @@
 <script type="text/babel">
   const cable = ActionCable.createConsumer()
 
+  const useBbox = () => {
+    const ref = React.useRef();
+    const [bbox, setBbox] = React.useState({});
+
+    const set = () => setBbox(ref && ref.current ? ref.current.getBoundingClientRect() : {});
+
+    React.useEffect(() => {
+      set();
+      window.addEventListener('resize', set);
+      return () => window.removeEventListener('resize', set);
+    }, []);
+
+    return [bbox, ref];
+  };
+
+  const drawTools = {
+    pencil: new DrawToolPencil(),
+  }
+
+  function DrawToolPencil() {
+    return {
+      onMouseDown: () => { console.log(1) },
+      onMouseMove: (x, y) => { console.log([x, y]) },
+      onMouseUp: () => { console.log(3) },
+    }
+  }
+
   function Painter(props) {
+    const [canvasBBox, canvas] = useBbox();
+    const drawToolRef = React.useRef(drawTools.pencil)
+    const drawingToolRef = React.useRef(null)
+
+    function onMouseDown(_e) {
+      if (drawingToolRef.current) return
+      drawingToolRef.current = drawToolRef.current
+      drawingToolRef.current.onMouseDown()
+    }
+
+    function onMouseMove(e) {
+      if (drawingToolRef.current) drawingToolRef.current.onMouseMove(e.clientX - canvasBBox.x, e.clientY - canvasBBox.y)
+    }
+
+    function onMouseUp(_e) {
+      if (drawingToolRef.current == null) return
+      drawingToolRef.current.onMouseUp()
+      drawingToolRef.current = null
+    }
+
     return (
-      "Hello, World!"
+      <canvas
+        width="640"
+        height="480"
+        style={ { border: '1px solid black' } }
+        ref={canvas}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+      />
     )
   }
 
