@@ -23,31 +23,53 @@
   }
 
   function DrawToolPencil() {
+    let currentPos
+
+    function draw(ctx, fromPos, toPos) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.lineCap = "round";
+      ctx.moveTo(fromPos.x, fromPos.y);
+      ctx.lineTo(toPos.x, toPos.y);
+      ctx.stroke();
+      ctx.closePath();
+      ctx.restore();
+    }
+
     return {
-      onMouseDown: () => { console.log(1) },
-      onMouseMove: (x, y) => { console.log([x, y]) },
-      onMouseUp: () => { console.log(3) },
+      onMouseDown: (ctx, cursorPos) => { currentPos = cursorPos },
+      onMouseMove: (ctx, cursorPos) => {
+        draw(ctx, currentPos, cursorPos)
+        currentPos = cursorPos
+      },
+      onMouseUp: (_ctx, _cursorPos) => {},
     }
   }
 
   function Painter(props) {
-    const [canvasBBox, canvas] = useBbox();
+    const [canvasBBox, canvasRef] = useBbox()
+    const ctx = canvasRef.current?.getContext('2d')
     const drawToolRef = React.useRef(drawTools.pencil)
     const drawingToolRef = React.useRef(null)
 
-    function onMouseDown(_e) {
+    function calculatePos(e) {
+      return { x: e.clientX - canvasBBox.x, y: e.clientY - canvasBBox.y }
+    }
+
+    function onMouseDown(e) {
       if (drawingToolRef.current) return
       drawingToolRef.current = drawToolRef.current
-      drawingToolRef.current.onMouseDown()
+      drawingToolRef.current.onMouseDown(ctx, calculatePos(e))
     }
 
     function onMouseMove(e) {
-      if (drawingToolRef.current) drawingToolRef.current.onMouseMove(e.clientX - canvasBBox.x, e.clientY - canvasBBox.y)
+      if (drawingToolRef.current == null) return
+      drawingToolRef.current.onMouseMove(ctx, calculatePos(e))
     }
 
-    function onMouseUp(_e) {
+    function onMouseUp(e) {
       if (drawingToolRef.current == null) return
-      drawingToolRef.current.onMouseUp()
+      drawingToolRef.current.onMouseUp(ctx, calculatePos(e))
       drawingToolRef.current = null
     }
 
@@ -56,7 +78,7 @@
         width="640"
         height="480"
         style={ { border: '1px solid black' } }
-        ref={canvas}
+        ref={canvasRef}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
