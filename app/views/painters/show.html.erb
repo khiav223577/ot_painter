@@ -30,6 +30,77 @@
     return [bbox, ref]
   }
 
+  class SketchExample extends React.Component {
+    constructor(props) {
+      super(props)
+      this.state = {
+        displayColorPicker: false,
+        color: props.color,
+      }
+    }
+
+    handleClick = () => {
+      this.setState({ displayColorPicker: !this.state.displayColorPicker })
+    }
+
+    handleClose = () => {
+      this.setState({ displayColorPicker: false })
+    }
+
+    handleChange = (color) => {
+      this.setState({ color: color.hex })
+      if (this.props.onChange) this.props.onChange(color)
+    }
+
+    render() {
+      const styles = {
+        color: {
+          width: '36px',
+          height: '14px',
+          borderRadius: '2px',
+          backgroundColor: this.state.color,
+        },
+        swatch: {
+          padding: '5px',
+          backgroundColor: '#fff',
+          borderRadius: '1px',
+          boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
+          display: 'inline-block',
+          cursor: 'pointer',
+          verticalAlign: 'middle',
+        },
+        popover: {
+          position: 'absolute',
+          zIndex: '2',
+        },
+        cover: {
+          position: 'fixed',
+          top: '0px',
+          right: '0px',
+          bottom: '0px',
+          left: '0px',
+        },
+      }
+
+      return (
+        <>
+          <div style={styles.swatch} onClick={this.handleClick}>
+            <div style={styles.color} />
+          </div>
+          {
+            this.state.displayColorPicker ? (
+              <div style={styles.popover}>
+                <div style={ styles.cover } onClick={this.handleClose}/>
+                <ReactColor.SketchPicker color={this.state.color} onChange={this.handleChange} />
+              </div>
+            ) : null
+          }
+
+        </>
+      )
+    }
+  }
+
   const synchronizer = new function() {
     const objects = []
 
@@ -55,7 +126,7 @@
         data: JSON.stringify(params),
         success: response => {
         },
-      });
+      })
     }
 
     return { save, load, render }
@@ -68,22 +139,22 @@
   }
 
   function DrawToolPencil() {
-    let currentPos, currentLineWidth
+    let currentPos, currentLineWidth, currentColor
 
     const cmds = []
 
-    function serializeAndReset() {
+    function serialize(selectedCmds) {
       return {
         kind: KIND_PENCIL,
-        cmds: cmds.splice(0, cmds.length),
+        cmds: selectedCmds,
         width: currentLineWidth,
-        color: 'red',
+        color: currentColor,
         version: 1,
       }
     }
 
     function render(ctx, object) {
-      const { cmds, width } = object
+      const { cmds, width, color } = object
       if (cmds.length === 0) return
 
       let fromX = cmds[0][0]
@@ -91,7 +162,7 @@
 
       ctx.save()
       ctx.lineWidth = width
-      ctx.strokeStyle = 'red'
+      ctx.strokeStyle = color
       ctx.lineCap = 'round'
 
       ctx.beginPath()
@@ -113,14 +184,15 @@
     }
 
     function save() {
-      synchronizer.save(serializeAndReset())
+      synchronizer.save(serialize(cmds.splice(0, cmds.length)))
     }
 
     return {
       render,
-      onMouseDown: (ctx, cursorPos, lineWidth) => {
+      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         currentPos = cursorPos
         currentLineWidth = lineWidth
+        currentColor = color
         cmds.push([cursorPos.x, cursorPos.y])
       },
       onMouseMove: (ctx, cursorPos) => {
@@ -129,7 +201,7 @@
         if (diffX === 0 && diffY === 0) return
 
         cmds.push([diffX, diffY])
-        render(ctx, { cmds: [[currentPos.x, currentPos.y], [diffX, diffY]], width: currentLineWidth })
+        render(ctx, serialize([[currentPos.x, currentPos.y], [diffX, diffY]]))
         currentPos = cursorPos
       },
       onMouseUp: (_ctx, _cursorPos) => {
@@ -141,6 +213,7 @@
   function Painter(_props) {
     const [canvasBBox, canvasRef] = useBbox()
     const [lineWidthRef, setLineWidth] = useRefState(3)
+    const [lineColorRef, setLineColor] = useRefState('black')
     const getCtx = () => canvasRef.current?.getContext('2d')
     const drawToolRef = React.useRef(drawTools[KIND_PENCIL])
     const drawingToolRef = React.useRef(null)
@@ -153,7 +226,7 @@
           synchronizer.load(data.object)
           synchronizer.render(getCtx())
         }
-      });
+      })
 
       return () => {
         channel.unsubscribe()
@@ -167,7 +240,7 @@
     function onMouseDown(e) {
       if (drawingToolRef.current) return
       drawingToolRef.current = drawToolRef.current
-      drawingToolRef.current.onMouseDown(getCtx(), calculatePos(e), lineWidthRef.current)
+      drawingToolRef.current.onMouseDown(getCtx(), calculatePos(e), lineWidthRef.current, lineColorRef.current)
     }
 
     function onMouseMove(e) {
@@ -203,10 +276,16 @@
             value={lineWidthRef.current}
             min="1"
             max="30"
-            onChange={e => { setLineWidth(e.target.value) } }
+            onChange={e => setLineWidth(e.target.value)}
           />
         </div>
-
+        <div style={{ marginTop: 5 }}>
+          顏色：
+          <SketchExample
+            color={lineColorRef.current}
+            onChange={color => setLineColor(color.hex)}
+          />
+        </div>
       </div>
     )
   }
