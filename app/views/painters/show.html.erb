@@ -143,7 +143,8 @@
     let maxID = -1
     let fakeIDCounter = 0
 
-    function render(ctx) {
+    function render(ctx, clearCanvas) {
+      clearCanvas()
       objects.forEach(object => drawTools[object.kind].render(ctx, object))
     }
 
@@ -340,6 +341,7 @@
     const getCtx2 = () => canvas2Ref.current?.getContext('2d')
     const [drawKindRef, setDrawKind] = useRefState(KIND_PENCIL)
     const drawingToolRef = React.useRef(null)
+    const clearCanvas1 = () => { getCtx1().clearRect(0, 0, canvas1Ref.current.width, canvas1Ref.current.height) }
     const clearCanvas2 = () => { getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height) }
 
     React.useEffect(() => {
@@ -348,7 +350,7 @@
         disconnected: () => console.log('disconnected'),
         received: function(data){
           synchronizer.load(data.object)
-          synchronizer.render(getCtx1())
+          synchronizer.render(getCtx1(), clearCanvas1)
         }
       })
 
@@ -381,7 +383,7 @@
       clearCanvas2()
     }
 
-    if (canvas1Ref.current) synchronizer.render(getCtx1())
+    if (canvas1Ref.current) synchronizer.render(getCtx1(), clearCanvas1)
 
     return (
       <div>
