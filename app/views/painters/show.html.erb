@@ -273,25 +273,16 @@
 
       let fromX = cmds[0][0]
       let fromY = cmds[0][1]
+      let toX = cmds[1][0]
+      let toY = cmds[1][1]
 
       ctx.save()
       ctx.lineWidth = width
       ctx.strokeStyle = color
       ctx.lineCap = 'round'
-
       ctx.beginPath()
-      for(let i = 1; i < cmds.length; ++i) {
-        let diffX = cmds[i][0]
-        let diffY = cmds[i][1]
-        let toX = fromX + diffX
-        let toY = fromY + diffY
-        ctx.moveTo(fromX, fromY)
-        ctx.lineTo(toX, toY)
-
-        fromX = toX
-        fromY = toY
-      }
-
+      ctx.moveTo(fromX, fromY)
+      ctx.lineTo(toX, toY)
       ctx.stroke()
       ctx.closePath()
       ctx.restore()
