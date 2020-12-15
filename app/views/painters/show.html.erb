@@ -4,19 +4,19 @@
   const cable = ActionCable.createConsumer()
 
   const useBbox = () => {
-    const ref = React.useRef();
-    const [bbox, setBbox] = React.useState({});
+    const ref = React.useRef()
+    const [bbox, setBbox] = React.useState({})
 
-    const set = () => setBbox(ref && ref.current ? ref.current.getBoundingClientRect() : {});
+    const set = () => setBbox(ref && ref.current ? ref.current.getBoundingClientRect() : {})
 
     React.useEffect(() => {
-      set();
-      window.addEventListener('resize', set);
-      return () => window.removeEventListener('resize', set);
-    }, []);
+      set()
+      window.addEventListener('resize', set)
+      return () => window.removeEventListener('resize', set)
+    }, [])
 
-    return [bbox, ref];
-  };
+    return [bbox, ref]
+  }
 
   const drawTools = {
     pencil: new DrawToolPencil(),
@@ -34,14 +34,15 @@
 
       drawCalls.push([diffX, diffY])
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.lineCap = "round";
-      ctx.moveTo(fromPos.x, fromPos.y);
-      ctx.lineTo(toPos.x, toPos.y);
-      ctx.stroke();
-      ctx.closePath();
-      ctx.restore();
+      ctx.save()
+      ctx.beginPath()
+      ctx.lineCap = "round"
+      ctx.moveTo(fromPos.x, fromPos.y)
+      ctx.lineTo(toPos.x, toPos.y)
+
+      ctx.stroke()
+      ctx.closePath()
+      ctx.restore()
     }
 
     return {
