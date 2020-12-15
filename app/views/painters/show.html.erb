@@ -56,7 +56,7 @@
   }
 
   function DrawToolPencil() {
-    let currentPos, tid
+    let currentPos
 
     const cmds = []
 
@@ -121,8 +121,7 @@
         currentPos = cursorPos
       },
       onMouseUp: (_ctx, _cursorPos) => {
-        clearTimeout(tid)
-        tid = setTimeout(() => { save() }, 1000)
+        save()
       },
     }
   }
