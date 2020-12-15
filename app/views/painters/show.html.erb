@@ -141,6 +141,7 @@
   const synchronizer = new function() {
     let objects = []
     let maxID = -1
+    let fakeIDCounter = 0
 
     function render(ctx) {
       objects.forEach(object => drawTools[object.kind].render(ctx, object))
@@ -158,7 +159,8 @@
     }
 
     function save(object) {
-      objects.push(object)
+      let fakeID = `fake-${fakeIDCounter += 1}`
+      objects.push({ ...object, id: fakeID })
 
       const params = { object }
 
@@ -169,7 +171,9 @@
           "Content-Type": "application/json",
         },
         data: JSON.stringify(params),
-        success: response => {
+        success: ({ data }) => {
+          _.remove(objects, { id: fakeID })
+          load({ ...object, id: data.id })
         },
       })
     }
