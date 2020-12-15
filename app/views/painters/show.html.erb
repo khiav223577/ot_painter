@@ -232,10 +232,12 @@
   }
 
   function Painter(_props) {
-    const [canvasBBox, canvasRef] = useBbox()
+    const canvas1Ref = React.useRef()
+    const [canvas2BBox, canvas2Ref] = useBbox()
     const [lineWidthRef, setLineWidth] = useRefState(3)
     const [lineColorRef, setLineColor] = useRefState('black')
-    const getCtx = () => canvasRef.current?.getContext('2d')
+    const getCtx1 = () => canvas1Ref.current?.getContext('2d')
+    const getCtx2 = () => canvas2Ref.current?.getContext('2d')
     const drawToolRef = React.useRef(drawTools[KIND_PENCIL])
     const drawingToolRef = React.useRef(null)
 
@@ -245,7 +247,7 @@
         disconnected: () => console.log('disconnected'),
         received: function(data){
           synchronizer.load(data.object)
-          synchronizer.render(getCtx())
+          synchronizer.render(getCtx1())
         }
       })
 
@@ -255,36 +257,58 @@
     }, [])
 
     function calculatePos(e) {
-      return { x: Math.round(e.clientX - canvasBBox.x), y: Math.round(e.clientY - canvasBBox.y) }
+      return { x: Math.round(e.clientX - canvas2BBox.x), y: Math.round(e.clientY - canvas2BBox.y) }
     }
 
     function onMouseDown(e) {
       if (drawingToolRef.current) return
       drawingToolRef.current = drawToolRef.current
-      drawingToolRef.current.onMouseDown(getCtx(), calculatePos(e), lineWidthRef.current, lineColorRef.current)
+      drawingToolRef.current.onMouseDown(getCtx2(), calculatePos(e), lineWidthRef.current, lineColorRef.current)
     }
 
     function onMouseMove(e) {
       if (drawingToolRef.current == null) return
-      drawingToolRef.current.onMouseMove(getCtx(), calculatePos(e))
+      drawingToolRef.current.onMouseMove(getCtx2(), calculatePos(e))
     }
 
     function onMouseUp(e) {
       if (drawingToolRef.current == null) return
-      drawingToolRef.current.onMouseUp(getCtx(), calculatePos(e))
+      drawingToolRef.current.onMouseUp(getCtx2(), calculatePos(e))
       drawingToolRef.current = null
+
+      getCtx1().drawImage(canvas2Ref.current, 0, 0);
+      getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height);
     }
 
-    if (canvasRef.current) synchronizer.render(getCtx())
+    if (canvas1Ref.current) synchronizer.render(getCtx1())
 
     return (
       <div>
-        <div>
+        <div
+          style={
+            {
+              width: 640,
+              height: 480,
+              position: 'relative',
+              marginBottom: 5,
+              border: '1px solid black'
+            }
+          }
+        >
           <canvas
             width="640"
             height="480"
-            style={ { border: '1px solid black' } }
-            ref={canvasRef}
+            style={ { position: 'absolute' } }
+            ref={canvas1Ref}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+          />
+          <canvas
+            width="640"
+            height="480"
+            style={ { position: 'absolute' } }
+            ref={canvas2Ref}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
