@@ -143,9 +143,9 @@
     let maxID = -1
     let fakeIDCounter = 0
 
-    function render(ctx, clearCanvas) {
+    function redraw(ctx, clearCanvas) {
       clearCanvas()
-      objects.forEach(object => drawTools[object.kind].render(ctx, object))
+      objects.forEach(object => drawTools[object.kind].draw(ctx, object))
     }
 
     function load(object) {
@@ -184,7 +184,7 @@
       })
     }
 
-    return { save, load, render }
+    return { save, load, redraw }
   }
 
   const KIND_PENCIL = 'pencil'
@@ -211,7 +211,7 @@
       }
     }
 
-    function render(ctx, object) {
+    function draw(ctx, object) {
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
@@ -247,7 +247,7 @@
 
     return {
       kind,
-      render,
+      draw,
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         currentPos = cursorPos
         currentLineWidth = lineWidth
@@ -260,7 +260,7 @@
         if (diffX === 0 && diffY === 0) return
 
         cmds.push([diffX, diffY])
-        render(ctx, serialize([[currentPos.x, currentPos.y], [diffX, diffY]]))
+        draw(ctx, serialize([[currentPos.x, currentPos.y], [diffX, diffY]]))
         currentPos = cursorPos
       },
       onMouseUp: (_ctx, _cursorPos) => {
@@ -284,7 +284,7 @@
       }
     }
 
-    function render(ctx, object) {
+    function draw(ctx, object) {
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
@@ -311,7 +311,7 @@
 
     return {
       kind,
-      render,
+      draw,
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         startPos = cursorPos
         currentLineWidth = lineWidth
@@ -324,7 +324,7 @@
 
         endPos = cursorPos
         clearCanvas()
-        render(ctx, serialize())
+        draw(ctx, serialize())
       },
       onMouseUp: (_ctx, _cursorPos) => {
         save()
@@ -350,7 +350,7 @@
         disconnected: () => console.log('disconnected'),
         received: function(data){
           synchronizer.load(data.object)
-          synchronizer.render(getCtx1(), clearCanvas1)
+          synchronizer.redraw(getCtx1(), clearCanvas1)
         }
       })
 
@@ -383,7 +383,6 @@
       clearCanvas2()
     }
 
-    if (canvas1Ref.current) synchronizer.render(getCtx1(), clearCanvas1)
 
     return (
       <div>
