@@ -3,6 +3,18 @@
 <script type="text/babel">
   const cable = ActionCable.createConsumer()
 
+  const useRefState = (initialValue) => {
+    const [state, setState] = React.useState(initialValue)
+    const stateRef = React.useRef(state)
+    return [
+      stateRef,
+      (state) => {
+        stateRef.current = state
+        setState(state)
+      }
+    ]
+  }
+
   const useBbox = () => {
     const ref = React.useRef()
     const [bbox, setBbox] = React.useState({})
@@ -22,7 +34,7 @@
     const objects = []
 
     function render(ctx) {
-      objects.forEach(object => drawTools[object.kind].render(ctx, object.cmds))
+      objects.forEach(object => drawTools[object.kind].render(ctx, object))
     }
 
     function load(object) {
@@ -56,7 +68,7 @@
   }
 
   function DrawToolPencil() {
-    let currentPos
+    let currentPos, currentLineWidth
 
     const cmds = []
 
@@ -64,20 +76,21 @@
       return {
         kind: KIND_PENCIL,
         cmds: cmds.splice(0, cmds.length),
-        width: 3,
+        width: currentLineWidth,
         color: 'red',
         version: 1,
       }
     }
 
-    function render(ctx, cmds) {
+    function render(ctx, object) {
+      const { cmds, width } = object
       if (cmds.length === 0) return
 
       let fromX = cmds[0][0]
       let fromY = cmds[0][1]
 
       ctx.save()
-      ctx.lineWidth = 3
+      ctx.lineWidth = width
       ctx.strokeStyle = 'red'
       ctx.lineCap = 'round'
 
@@ -105,8 +118,9 @@
 
     return {
       render,
-      onMouseDown: (ctx, cursorPos) => {
+      onMouseDown: (ctx, cursorPos, lineWidth) => {
         currentPos = cursorPos
+        currentLineWidth = lineWidth
         cmds.push([cursorPos.x, cursorPos.y])
       },
       onMouseMove: (ctx, cursorPos) => {
@@ -115,7 +129,7 @@
         if (diffX === 0 && diffY === 0) return
 
         cmds.push([diffX, diffY])
-        render(ctx, [[currentPos.x, currentPos.y], [diffX, diffY]])
+        render(ctx, { cmds: [[currentPos.x, currentPos.y], [diffX, diffY]], width: currentLineWidth })
         currentPos = cursorPos
       },
       onMouseUp: (_ctx, _cursorPos) => {
@@ -126,6 +140,7 @@
 
   function Painter(_props) {
     const [canvasBBox, canvasRef] = useBbox()
+    const [lineWidthRef, setLineWidth] = useRefState(3)
     const getCtx = () => canvasRef.current?.getContext('2d')
     const drawToolRef = React.useRef(drawTools[KIND_PENCIL])
     const drawingToolRef = React.useRef(null)
@@ -152,7 +167,7 @@
     function onMouseDown(e) {
       if (drawingToolRef.current) return
       drawingToolRef.current = drawToolRef.current
-      drawingToolRef.current.onMouseDown(getCtx(), calculatePos(e))
+      drawingToolRef.current.onMouseDown(getCtx(), calculatePos(e), lineWidthRef.current)
     }
 
     function onMouseMove(e) {
@@ -169,15 +184,30 @@
     if (canvasRef.current) synchronizer.render(getCtx())
 
     return (
-      <canvas
-        width="640"
-        height="480"
-        style={ { border: '1px solid black' } }
-        ref={canvasRef}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-      />
+      <div>
+        <div>
+          <canvas
+            width="640"
+            height="480"
+            style={ { border: '1px solid black' } }
+            ref={canvasRef}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+          />
+        </div>
+        <div>
+          粗細：
+          <input
+            type="number"
+            value={lineWidthRef.current}
+            min="1"
+            max="30"
+            onChange={e => { setLineWidth(e.target.value) } }
+          />
+        </div>
+
+      </div>
     )
   }
 
