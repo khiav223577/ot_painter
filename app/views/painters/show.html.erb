@@ -22,8 +22,8 @@
     const objects = []
 
     return {
-      save: (type, cmds) => {
-        objects << { type, cmds, version: 1 }
+      save: (object) => {
+        objects << object
       },
     }
   }
@@ -46,6 +46,7 @@
 
       ctx.save()
       ctx.lineWidth = 3
+      ctx.strokeStyle = 'red'
 
       ctx.beginPath()
       ctx.lineCap = "round"
@@ -57,8 +58,20 @@
       ctx.restore()
     }
 
+    function serializeAndReset() {
+      return {
+        type: 'pencil',
+        cmds: drawCalls.splice(0, drawCalls.length),
+        version: 1,
+        line_width: 3,
+        line_cap: 'round',
+        color: 'red',
+        version: 1,
+      }
+    }
+
     function save() {
-      synchronizer.save('pencil', drawCalls.splice(0, drawCalls.length))
+      synchronizer.save(serializeAndReset())
     }
 
     return {
