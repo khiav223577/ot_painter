@@ -174,6 +174,7 @@
 
   const drawTools = _.keyBy([
     new DrawToolPencil(),
+    new DrawToolLine(),
   ], tool => tool.kind);
 
   function DrawToolPencil() {
@@ -243,6 +244,78 @@
         cmds.push([diffX, diffY])
         render(ctx, serialize([[currentPos.x, currentPos.y], [diffX, diffY]]))
         currentPos = cursorPos
+      },
+      onMouseUp: (_ctx, _cursorPos) => {
+        save()
+      },
+    }
+  }
+
+  function DrawToolLine() {
+    let startPos, endPos, currentLineWidth, currentColor
+
+    const kind = KIND_LINE
+    const cmds = []
+
+    function serialize() {
+      return {
+        kind,
+        cmds: [[startPos.x, startPos.y], [endPos.x, endPos.y]],
+        width: currentLineWidth,
+        color: currentColor,
+        version: 1,
+      }
+    }
+
+    function render(ctx, object) {
+      const { cmds, width, color } = object
+      if (cmds.length === 0) return
+
+      let fromX = cmds[0][0]
+      let fromY = cmds[0][1]
+
+      ctx.save()
+      ctx.lineWidth = width
+      ctx.strokeStyle = color
+      ctx.lineCap = 'round'
+
+      ctx.beginPath()
+      for(let i = 1; i < cmds.length; ++i) {
+        let diffX = cmds[i][0]
+        let diffY = cmds[i][1]
+        let toX = fromX + diffX
+        let toY = fromY + diffY
+        ctx.moveTo(fromX, fromY)
+        ctx.lineTo(toX, toY)
+
+        fromX = toX
+        fromY = toY
+      }
+
+      ctx.stroke()
+      ctx.closePath()
+      ctx.restore()
+    }
+
+    function save() {
+      synchronizer.save(serialize())
+    }
+
+    return {
+      kind,
+      render,
+      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+        startPos = cursorPos
+        currentLineWidth = lineWidth
+        currentColor = color
+      },
+      onMouseMove: (ctx, cursorPos) => {
+        const diffX = cursorPos.x - startPos.x
+        const diffY = cursorPos.y - startPos.y
+        if (diffX === 0 && diffY === 0) return
+
+        endPos = cursorPos
+        render(ctx, serialize())
       },
       onMouseUp: (_ctx, _cursorPos) => {
         save()
