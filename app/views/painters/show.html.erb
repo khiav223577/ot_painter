@@ -148,13 +148,18 @@
     }
 
     function load(object) {
-      objects.push(object)
-      if (object.id < maxID) {
-        objects = _.sortBy(objects, 'id')
-      } else if (object.id === maxID) {
-        objects.pop()
-      } else {
+      if (object.id > maxID) { // insert new object
+        objects.push(object)
         maxID = object.id
+      } else { // insert old object or update an existing object
+        const originObject = _.find(objects, { id: object.id })
+
+        if (originObject) {
+          _.merge(originObject, object) // update an existing object
+        } else {
+          objects.push(object) // insert old object
+          objects = _.sortBy(objects, 'id')
+        }
       }
     }
 
