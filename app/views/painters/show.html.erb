@@ -18,12 +18,22 @@
     return [bbox, ref]
   }
 
+  const synchronizer = new function() {
+    const objects = []
+
+    return {
+      save: (type, cmds) => {
+        objects << { type, cmds, version: 1 }
+      },
+    }
+  }
+
   const drawTools = {
     pencil: new DrawToolPencil(),
   }
 
   function DrawToolPencil() {
-    let currentPos
+    let currentPos, tid
 
     const drawCalls = []
 
@@ -47,6 +57,10 @@
       ctx.restore()
     }
 
+    function save() {
+      synchronizer.save('pencil', drawCalls.splice(0, drawCalls.length))
+    }
+
     return {
       onMouseDown: (ctx, cursorPos) => {
         currentPos = cursorPos
@@ -56,7 +70,10 @@
         draw(ctx, currentPos, cursorPos)
         currentPos = cursorPos
       },
-      onMouseUp: (_ctx, _cursorPos) => {},
+      onMouseUp: (_ctx, _cursorPos) => {
+        clearTimeout(tid)
+        tid = setTimeout(() => { save() }, 1000)
+      },
     }
   }
 
