@@ -102,6 +102,26 @@
     }
   }
 
+  function PencilIcon({ style }) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        style={style}
+        x="0"
+        y="0"
+        enableBackground="new 0 0 23.197 23.197"
+        version="1.1"
+        viewBox="0 0 23.197 23.197"
+        xmlSpace="preserve"
+      >
+        <path
+          fill="#090609"
+          d="M17.604 13.732L7.471 3.6l.724-.723 10.131 10.132-.722.723zM4.714 6.361L14.842 16.49l1.832-1.832L6.545 4.529 4.714 6.361zm-.926.925l-.91.909 10.127 10.132.909-.909L3.788 7.286zm15.236 6.42l-5.318 5.32 5.174 2.26 2.407-2.405-2.263-5.175zm4.14 8.94l-1.207-2.761a.397.397 0 00-.288-.229.404.404 0 00-.352.108l-1.555 1.556a.388.388 0 00-.107.352.391.391 0 00.229.287l2.762 1.205c.147.065.32.033.437-.08a.404.404 0 00.081-.438zM7.332 2.013L5.433.116a.392.392 0 00-.556 0L.115 4.877a.394.394 0 000 .557L2.012 7.33a.394.394 0 00.557 0l4.762-4.761a.395.395 0 00.001-.556z"
+        ></path>
+      </svg>
+    );
+  }
+
   const synchronizer = new function() {
     const objects = []
 
@@ -271,21 +291,34 @@
           />
         </div>
         <div>
-          粗細：
-          <input
-            type="number"
-            value={lineWidthRef.current}
-            min="1"
-            max="80"
-            onChange={e => setLineWidth(e.target.value)}
-          />
-        </div>
-        <div style={{ marginTop: 5 }}>
-          顏色：
-          <SketchExample
-            color={lineColorRef.current}
-            onChange={color => setLineColor(color.hex)}
-          />
+          <PencilIcon
+            style={
+              {
+                width: 24,
+                height: 24,
+                borderBottom: '2px solid red',
+                cursor: 'pointer',
+                padding: '3px 6px'
+              }
+            }
+            />
+          <div>
+            粗細：
+            <input
+              type="number"
+              value={lineWidthRef.current}
+              min="1"
+              max="80"
+              onChange={e => setLineWidth(e.target.value)}
+            />
+          </div>
+          <div style={{ marginTop: 5 }}>
+            顏色：
+            <SketchExample
+              color={lineColorRef.current}
+              onChange={color => setLineColor(color.hex)}
+            />
+          </div>
         </div>
       </div>
     )
