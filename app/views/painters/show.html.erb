@@ -236,7 +236,7 @@
         currentColor = color
         cmds.push([cursorPos.x, cursorPos.y])
       },
-      onMouseMove: (ctx, cursorPos) => {
+      onMouseMove: (ctx, cursorPos, _clearCanvas) => {
         const diffX = cursorPos.x - currentPos.x
         const diffY = cursorPos.y - currentPos.y
         if (diffX === 0 && diffY === 0) return
@@ -309,12 +309,13 @@
         currentLineWidth = lineWidth
         currentColor = color
       },
-      onMouseMove: (ctx, cursorPos) => {
+      onMouseMove: (ctx, cursorPos, clearCanvas) => {
         const diffX = cursorPos.x - startPos.x
         const diffY = cursorPos.y - startPos.y
         if (diffX === 0 && diffY === 0) return
 
         endPos = cursorPos
+        clearCanvas()
         render(ctx, serialize())
       },
       onMouseUp: (_ctx, _cursorPos) => {
@@ -332,6 +333,7 @@
     const getCtx2 = () => canvas2Ref.current?.getContext('2d')
     const [drawKindRef, setDrawKind] = useRefState(KIND_PENCIL)
     const drawingToolRef = React.useRef(null)
+    const clearCanvas2 = () => { getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height) }
 
     React.useEffect(() => {
       const channel = cable.subscriptions.create('PainterChannel', {
@@ -360,7 +362,7 @@
 
     function onMouseMove(e) {
       if (drawingToolRef.current == null) return
-      drawingToolRef.current.onMouseMove(getCtx2(), calculatePos(e))
+      drawingToolRef.current.onMouseMove(getCtx2(), calculatePos(e), clearCanvas2)
     }
 
     function onMouseUp(e) {
@@ -369,7 +371,7 @@
       drawingToolRef.current = null
 
       getCtx1().drawImage(canvas2Ref.current, 0, 0)
-      getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height)
+      clearCanvas2()
     }
 
     if (canvas1Ref.current) synchronizer.render(getCtx1())
