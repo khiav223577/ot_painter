@@ -121,6 +121,23 @@
     );
   }
 
+  function LineIcon({ style }) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        style={style}
+        x="0"
+        y="0"
+        enableBackground="new 0 0 512.001 512.001"
+        version="1.1"
+        viewBox="0 0 512.001 512.001"
+        xmlSpace="preserve"
+      >
+        <path d="M506.143 5.859c-7.811-7.811-20.475-7.811-28.285 0l-472 472c-7.811 7.811-7.811 20.474 0 28.284 3.905 3.906 9.024 5.858 14.142 5.858s10.237-1.953 14.143-5.858l472-472c7.811-7.81 7.811-20.473 0-28.284z" />
+      </svg>
+    );
+  }
+
   const synchronizer = new function() {
     const objects = []
 
@@ -153,19 +170,21 @@
   }
 
   const KIND_PENCIL = 'pencil'
+  const KIND_LINE   = 'line'
 
-  const drawTools = {
-    [KIND_PENCIL]: new DrawToolPencil(),
-  }
+  const drawTools = _.keyBy([
+    new DrawToolPencil(),
+  ], tool => tool.kind);
 
   function DrawToolPencil() {
     let currentPos, currentLineWidth, currentColor
 
+    const kind = KIND_PENCIL
     const cmds = []
 
     function serialize(selectedCmds) {
       return {
-        kind: KIND_PENCIL,
+        kind,
         cmds: selectedCmds,
         width: currentLineWidth,
         color: currentColor,
@@ -208,6 +227,7 @@
     }
 
     return {
+      kind,
       render,
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         currentPos = cursorPos
@@ -237,7 +257,7 @@
     const [lineColorRef, setLineColor] = useRefState('black')
     const getCtx1 = () => canvas1Ref.current?.getContext('2d')
     const getCtx2 = () => canvas2Ref.current?.getContext('2d')
-    const drawToolRef = React.useRef(drawTools[KIND_PENCIL])
+    const [drawKindRef, setDrawKind] = useRefState(KIND_PENCIL)
     const drawingToolRef = React.useRef(null)
 
     React.useEffect(() => {
@@ -261,7 +281,7 @@
 
     function onMouseDown(e) {
       if (drawingToolRef.current) return
-      drawingToolRef.current = drawToolRef.current
+      drawingToolRef.current = drawTools[drawKindRef.current]
       drawingToolRef.current.onMouseDown(getCtx2(), calculatePos(e), lineWidthRef.current, lineColorRef.current)
     }
 
@@ -314,17 +334,34 @@
           />
         </div>
         <div>
-          <PencilIcon
-            style={
-              {
-                width: 24,
-                height: 24,
-                borderBottom: '2px solid red',
-                cursor: 'pointer',
-                padding: '3px 6px'
+          <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_PENCIL) }>
+            <PencilIcon
+              style={
+                {
+                  width: 24,
+                  height: 24,
+                  borderBottom: drawKindRef.current === KIND_PENCIL ? '2px solid red' : null,
+                  cursor: 'pointer',
+                  padding: '3px 6px',
+                }
               }
-            }
             />
+          </div>
+
+          <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_LINE) }>
+            <LineIcon
+              style={
+                {
+                  width: 24,
+                  height: 24,
+                  borderBottom: drawKindRef.current === KIND_LINE ? '2px solid red' : null,
+                  cursor: 'pointer',
+                  padding: '3px 6px',
+                }
+              }
+            />
+          </div>
+
           <div>
             粗細：
             <input
