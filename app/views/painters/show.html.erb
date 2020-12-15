@@ -166,12 +166,10 @@
     )
   }
 
-  $(() => {
-    <%= @objects.to_json.html_safe %>.forEach(synchronizer.load)
+  <%= @objects.to_json.html_safe %>.forEach(synchronizer.load)
 
-    ReactDOM.render(
-      <Painter />,
-      document.getElementById('root'),
-    )
-  })
+  ReactDOM.render(
+    <Painter />,
+    document.getElementById('root'),
+  )
 </script>
