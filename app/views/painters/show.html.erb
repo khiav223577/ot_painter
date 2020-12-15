@@ -3,6 +3,54 @@
 <script type="text/babel">
   const cable = ActionCable.createConsumer()
 
+  window.requestAnimFrame = (() => {
+    return (
+      window.requestAnimationFrame       ||
+      window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame    ||
+      window.oRequestAnimationFrame      ||
+      window.msRequestAnimationFrame     ||
+      function(callback) {
+        window.setTimeout(callback, 1000 / 60)
+      }
+    )
+  })()
+
+  function AnimFrameLooper(interval){
+    var loopId = 0
+    var prevTime = Date.now()
+    var callbacks = []
+    var running = false
+
+    function loop(id){
+      if (id !== loopId) return
+      window.requestAnimFrame(function(){ loop(id) })
+      var now = Date.now()
+      var delta = now - prevTime
+      if (delta < interval) return
+      var deltaRatio = delta / interval // 經過的時間與預計的時間的比例。數字越高代表越LAG。
+      prevTime += delta - (delta % interval) // 60FPS 時，delta會是16ms的倍數。要減掉delta % interval否則會多算時間。(#664)
+      callbacks.forEach(function(f){ f(deltaRatio) })
+    }
+
+    function stop(){
+      callbacks = []
+      loopId += 1
+      running = false
+    }
+
+    return {
+      get running() { return running },
+      stop: stop,
+      start: function(callback){
+        stop()
+        if (callback) callbacks.push(callback)
+        running = true
+        loop(loopId)
+      },
+    }
+  }
+
   const useRefState = (initialValue) => {
     const [state, setState] = React.useState(initialValue)
     const stateRef = React.useRef(state)
@@ -142,8 +190,10 @@
     let objects = []
     let maxID = -1
     let fakeIDCounter = 0
+    let needRedraw = true
 
     function redraw(ctx, clearCanvas) {
+      needRedraw = false
       clearCanvas()
       objects.forEach(object => drawTools[object.kind].draw(ctx, object))
     }
@@ -162,6 +212,8 @@
           objects = _.sortBy(objects, 'id')
         }
       }
+
+      needRedraw = true
     }
 
     function save(object) {
@@ -184,7 +236,13 @@
       })
     }
 
-    return { save, load, redraw }
+    return {
+      save,
+      load,
+      redraw,
+      set needRedraw(flag) { needRedraw = flag },
+      get needRedraw() { return needRedraw },
+    }
   }
 
   const KIND_PENCIL = 'pencil'
@@ -350,13 +408,22 @@
         disconnected: () => console.log('disconnected'),
         received: function(data){
           synchronizer.load(data.object)
-          synchronizer.redraw(getCtx1(), clearCanvas1)
         }
       })
 
       return () => {
         channel.unsubscribe()
       }
+    }, [])
+
+    React.useEffect(() => {
+      const looper = new AnimFrameLooper(25)
+
+      looper.start(() => {
+        if (synchronizer.needRedraw) synchronizer.redraw(getCtx1(), clearCanvas1)
+      })
+
+      return () => { redrawLoop.stop() }
     }, [])
 
     function calculatePos(e) {
@@ -382,7 +449,6 @@
       getCtx1().drawImage(canvas2Ref.current, 0, 0)
       clearCanvas2()
     }
-
 
     return (
       <div>
