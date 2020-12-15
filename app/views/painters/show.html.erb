@@ -126,9 +126,24 @@
 
   function Painter(_props) {
     const [canvasBBox, canvasRef] = useBbox()
-    const ctx = canvasRef.current?.getContext('2d')
+    const getCtx = () => canvasRef.current?.getContext('2d')
     const drawToolRef = React.useRef(drawTools[KIND_PENCIL])
     const drawingToolRef = React.useRef(null)
+
+    React.useEffect(() => {
+      const channel = cable.subscriptions.create('PainterChannel', {
+        connected: () => console.log('connected'),
+        disconnected: () => console.log('disconnected'),
+        received: function(data){
+          synchronizer.load(data.object)
+          synchronizer.render(getCtx())
+        }
+      });
+
+      return () => {
+        channel.unsubscribe()
+      }
+    }, [])
 
     function calculatePos(e) {
       return { x: Math.round(e.clientX - canvasBBox.x), y: Math.round(e.clientY - canvasBBox.y) }
@@ -137,21 +152,21 @@
     function onMouseDown(e) {
       if (drawingToolRef.current) return
       drawingToolRef.current = drawToolRef.current
-      drawingToolRef.current.onMouseDown(ctx, calculatePos(e))
+      drawingToolRef.current.onMouseDown(getCtx(), calculatePos(e))
     }
 
     function onMouseMove(e) {
       if (drawingToolRef.current == null) return
-      drawingToolRef.current.onMouseMove(ctx, calculatePos(e))
+      drawingToolRef.current.onMouseMove(getCtx(), calculatePos(e))
     }
 
     function onMouseUp(e) {
       if (drawingToolRef.current == null) return
-      drawingToolRef.current.onMouseUp(ctx, calculatePos(e))
+      drawingToolRef.current.onMouseUp(getCtx(), calculatePos(e))
       drawingToolRef.current = null
     }
 
-    if (ctx) synchronizer.render(ctx)
+    if (canvasRef.current) synchronizer.render(getCtx())
 
     return (
       <canvas

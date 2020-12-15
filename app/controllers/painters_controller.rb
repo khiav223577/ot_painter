@@ -19,6 +19,11 @@ class PaintersController < ActionController::Base
 
     $objects << object
 
+    ActionCable.server.broadcast(
+      'painter_channel',
+      object: object,
+    )
+
     render json: {
       data: {
         id: object['id'],
