@@ -139,7 +139,8 @@
   }
 
   const synchronizer = new function() {
-    const objects = []
+    let objects = []
+    let maxID = -1
 
     function render(ctx) {
       objects.forEach(object => drawTools[object.kind].render(ctx, object))
@@ -147,6 +148,13 @@
 
     function load(object) {
       objects.push(object)
+      if (object.id < maxID) {
+        objects = _.sortBy(objects, 'id')
+      } else if (object.id === maxID) {
+        objects.pop()
+      } else {
+        maxID = object.id
+      }
     }
 
     function save(object) {
