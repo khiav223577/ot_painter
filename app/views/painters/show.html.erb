@@ -21,11 +21,30 @@
   const synchronizer = new function() {
     const objects = []
 
-    return {
-      save: (object) => {
-        objects << object
-      },
+    function load(object) {
+      objects << object
+
+
     }
+
+    function save(object) {
+      objects << object
+
+      const params = { object }
+
+      $.ajax({
+        url: '/painters',
+        type: 'PUT',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: JSON.stringify(params),
+        success: response => {
+        },
+      });
+    }
+
+    return { save, load }
   }
 
   const drawTools = {
@@ -62,9 +81,7 @@
       return {
         type: 'pencil',
         cmds: drawCalls.splice(0, drawCalls.length),
-        version: 1,
-        line_width: 3,
-        line_cap: 'round',
+        width: 3,
         color: 'red',
         version: 1,
       }
@@ -90,7 +107,7 @@
     }
   }
 
-  function Painter(props) {
+  function Painter(_props) {
     const [canvasBBox, canvasRef] = useBbox()
     const ctx = canvasRef.current?.getContext('2d')
     const drawToolRef = React.useRef(drawTools.pencil)
@@ -134,4 +151,8 @@
     <Painter />,
     document.getElementById('root'),
   )
+
+  $(() => {
+    <%= @objects.to_json.html_safe %>.forEach(synchronizer.load)
+  })
 </script>
