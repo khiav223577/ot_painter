@@ -35,6 +35,8 @@
       drawCalls.push([diffX, diffY])
 
       ctx.save()
+      ctx.lineWidth = 3
+
       ctx.beginPath()
       ctx.lineCap = "round"
       ctx.moveTo(fromPos.x, fromPos.y)
