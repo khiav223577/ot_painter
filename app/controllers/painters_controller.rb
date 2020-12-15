@@ -14,7 +14,7 @@ class PaintersController < ActionController::Base
   def update
     return render_error('invalid params') if params[:object] == nil
 
-    object = params[:object].permit(:type, :cmds, :version, :width, :color)
+    object = params[:object].slice(:kind, :cmds, :version, :width, :color)
     object['id'] = $objects.size + 1
 
     $objects << object

@@ -21,14 +21,16 @@
   const synchronizer = new function() {
     const objects = []
 
+    function render(ctx) {
+      objects.forEach(object => drawTools[object.kind].render(ctx, object.cmds))
+    }
+
     function load(object) {
-      objects << object
-
-
+      objects.push(object)
     }
 
     function save(object) {
-      objects << object
+      objects.push(object)
 
       const params = { object }
 
@@ -44,47 +46,59 @@
       });
     }
 
-    return { save, load }
+    return { save, load, render }
   }
 
+  const KIND_PENCIL = 'pencil'
+
   const drawTools = {
-    pencil: new DrawToolPencil(),
+    [KIND_PENCIL]: new DrawToolPencil(),
   }
 
   function DrawToolPencil() {
     let currentPos, tid
 
-    const drawCalls = []
-
-    function draw(ctx, fromPos, toPos) {
-      const diffX = toPos.x - fromPos.x
-      const diffY = toPos.y - fromPos.y
-      if (diffX === 0 && diffY === 0) return
-
-      drawCalls.push([diffX, diffY])
-
-      ctx.save()
-      ctx.lineWidth = 3
-      ctx.strokeStyle = 'red'
-
-      ctx.beginPath()
-      ctx.lineCap = "round"
-      ctx.moveTo(fromPos.x, fromPos.y)
-      ctx.lineTo(toPos.x, toPos.y)
-
-      ctx.stroke()
-      ctx.closePath()
-      ctx.restore()
-    }
+    const cmds = []
 
     function serializeAndReset() {
       return {
-        type: 'pencil',
-        cmds: drawCalls.splice(0, drawCalls.length),
+        kind: KIND_PENCIL,
+        cmds: cmds.splice(0, cmds.length),
         width: 3,
         color: 'red',
         version: 1,
       }
+    }
+
+    function render(ctx, cmds) {
+      if (cmds.length === 0) return
+
+      console.log(cmds)
+
+      let fromX = cmds[0][0]
+      let fromY = cmds[0][1]
+
+      ctx.save()
+      ctx.lineWidth = 3
+      ctx.strokeStyle = 'red'
+      ctx.lineCap = 'round'
+
+      ctx.beginPath()
+      for(let i = 1; i < cmds.length; ++i) {
+        let diffX = cmds[i][0]
+        let diffY = cmds[i][1]
+        let toX = fromX + diffX
+        let toY = fromY + diffY
+        ctx.moveTo(fromX, fromY)
+        ctx.lineTo(toX, toY)
+
+        fromX = toX
+        fromY = toY
+      }
+
+      ctx.stroke()
+      ctx.closePath()
+      ctx.restore()
     }
 
     function save() {
@@ -92,12 +106,18 @@
     }
 
     return {
+      render,
       onMouseDown: (ctx, cursorPos) => {
         currentPos = cursorPos
-        drawCalls.push([cursorPos.x, cursorPos.y])
+        cmds.push([cursorPos.x, cursorPos.y])
       },
       onMouseMove: (ctx, cursorPos) => {
-        draw(ctx, currentPos, cursorPos)
+        const diffX = cursorPos.x - currentPos.x
+        const diffY = cursorPos.y - currentPos.y
+        if (diffX === 0 && diffY === 0) return
+
+        cmds.push([diffX, diffY])
+        render(ctx, [[currentPos.x, currentPos.y], [diffX, diffY]])
         currentPos = cursorPos
       },
       onMouseUp: (_ctx, _cursorPos) => {
@@ -110,7 +130,7 @@
   function Painter(_props) {
     const [canvasBBox, canvasRef] = useBbox()
     const ctx = canvasRef.current?.getContext('2d')
-    const drawToolRef = React.useRef(drawTools.pencil)
+    const drawToolRef = React.useRef(drawTools[KIND_PENCIL])
     const drawingToolRef = React.useRef(null)
 
     function calculatePos(e) {
@@ -134,6 +154,8 @@
       drawingToolRef.current = null
     }
 
+    if (ctx) synchronizer.render(ctx)
+
     return (
       <canvas
         width="640"
@@ -147,12 +169,12 @@
     )
   }
 
-  ReactDOM.render(
-    <Painter />,
-    document.getElementById('root'),
-  )
-
   $(() => {
     <%= @objects.to_json.html_safe %>.forEach(synchronizer.load)
+
+    ReactDOM.render(
+      <Painter />,
+      document.getElementById('root'),
+    )
   })
 </script>
