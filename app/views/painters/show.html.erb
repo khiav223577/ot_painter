@@ -118,7 +118,7 @@
           d="M17.604 13.732L7.471 3.6l.724-.723 10.131 10.132-.722.723zM4.714 6.361L14.842 16.49l1.832-1.832L6.545 4.529 4.714 6.361zm-.926.925l-.91.909 10.127 10.132.909-.909L3.788 7.286zm15.236 6.42l-5.318 5.32 5.174 2.26 2.407-2.405-2.263-5.175zm4.14 8.94l-1.207-2.761a.397.397 0 00-.288-.229.404.404 0 00-.352.108l-1.555 1.556a.388.388 0 00-.107.352.391.391 0 00.229.287l2.762 1.205c.147.065.32.033.437-.08a.404.404 0 00.081-.438zM7.332 2.013L5.433.116a.392.392 0 00-.556 0L.115 4.877a.394.394 0 000 .557L2.012 7.33a.394.394 0 00.557 0l4.762-4.761a.395.395 0 00.001-.556z"
         />
       </svg>
-    );
+    )
   }
 
   function LineIcon({ style }) {
@@ -135,7 +135,7 @@
       >
         <path d="M506.143 5.859c-7.811-7.811-20.475-7.811-28.285 0l-472 472c-7.811 7.811-7.811 20.474 0 28.284 3.905 3.906 9.024 5.858 14.142 5.858s10.237-1.953 14.143-5.858l472-472c7.811-7.81 7.811-20.473 0-28.284z" />
       </svg>
-    );
+    )
   }
 
   const synchronizer = new function() {
@@ -175,7 +175,7 @@
   const drawTools = _.keyBy([
     new DrawToolPencil(),
     new DrawToolLine(),
-  ], tool => tool.kind);
+  ], tool => tool.kind)
 
   function DrawToolPencil() {
     let currentPos, currentLineWidth, currentColor
@@ -368,8 +368,8 @@
       drawingToolRef.current.onMouseUp(getCtx2(), calculatePos(e))
       drawingToolRef.current = null
 
-      getCtx1().drawImage(canvas2Ref.current, 0, 0);
-      getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height);
+      getCtx1().drawImage(canvas2Ref.current, 0, 0)
+      getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height)
     }
 
     if (canvas1Ref.current) synchronizer.render(getCtx1())
