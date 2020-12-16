@@ -220,7 +220,7 @@
     let objects = []
     let maxID = -1
     let fakeIDCounter = 0
-    let needRedraw = true
+    let needRedraw = false
 
     function redraw(ctx, clearCanvas) {
       needRedraw = false
@@ -535,6 +535,8 @@
 
       event.preventDefault()
     }
+
+    synchronizer.needRedraw = true
 
     return (
       <div>
