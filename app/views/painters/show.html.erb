@@ -528,7 +528,7 @@
           event.clientY - canvas2BBoxRef.current.y
         )
       } else {
-        viewBoxManager.addXY(event.deltaX * viewBoxManager.scale, -event.deltaY * viewBoxManager.scale)
+        viewBoxManager.addXY(event.deltaX / viewBoxManager.scale, -event.deltaY / viewBoxManager.scale)
       }
 
       event.preventDefault()
