@@ -1,0 +1,542 @@
+<h3>Painter Demo</h3>
+
+<script type="text/babel">
+  const cable = ActionCable.createConsumer()
+
+  window.requestAnimFrame = (() => {
+    return (
+      window.requestAnimationFrame       ||
+      window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame    ||
+      window.oRequestAnimationFrame      ||
+      window.msRequestAnimationFrame     ||
+      function(callback) {
+        window.setTimeout(callback, 1000 / 60)
+      }
+    )
+  })()
+
+  function AnimFrameLooper(interval){
+    var loopId = 0
+    var prevTime = Date.now()
+    var callbacks = []
+    var running = false
+
+    function loop(id){
+      if (id !== loopId) return
+      window.requestAnimFrame(function(){ loop(id) })
+      var now = Date.now()
+      var delta = now - prevTime
+      if (delta < interval) return
+      var deltaRatio = delta / interval // 經過的時間與預計的時間的比例。數字越高代表越LAG。
+      prevTime += delta - (delta % interval) // 60FPS 時，delta會是16ms的倍數。要減掉delta % interval否則會多算時間。(#664)
+      callbacks.forEach(function(f){ f(deltaRatio) })
+    }
+
+    function stop(){
+      callbacks = []
+      loopId += 1
+      running = false
+    }
+
+    return {
+      get running() { return running },
+      stop: stop,
+      start: function(callback){
+        stop()
+        if (callback) callbacks.push(callback)
+        running = true
+        loop(loopId)
+      },
+    }
+  }
+
+  const useRefState = (initialValue) => {
+    const [state, setState] = React.useState(initialValue)
+    const stateRef = React.useRef(state)
+    return [
+      stateRef,
+      (state) => {
+        stateRef.current = state
+        setState(state)
+      }
+    ]
+  }
+
+  const useBbox = () => {
+    const ref = React.useRef()
+    const [bbox, setBbox] = React.useState({})
+
+    const set = () => setBbox(ref && ref.current ? ref.current.getBoundingClientRect() : {})
+
+    React.useEffect(() => {
+      set()
+      window.addEventListener('resize', set)
+      return () => window.removeEventListener('resize', set)
+    }, [])
+
+    return [bbox, ref]
+  }
+
+  class SketchExample extends React.Component {
+    constructor(props) {
+      super(props)
+      this.state = {
+        displayColorPicker: false,
+        color: props.color,
+      }
+    }
+
+    handleClick = () => {
+      this.setState({ displayColorPicker: !this.state.displayColorPicker })
+    }
+
+    handleClose = () => {
+      this.setState({ displayColorPicker: false })
+    }
+
+    handleChange = (color) => {
+      this.setState({ color: color.hex })
+      if (this.props.onChange) this.props.onChange(color)
+    }
+
+    render() {
+      const styles = {
+        color: {
+          width: '36px',
+          height: '14px',
+          borderRadius: '2px',
+          backgroundColor: this.state.color,
+        },
+        swatch: {
+          padding: '5px',
+          backgroundColor: '#fff',
+          borderRadius: '1px',
+          boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
+          display: 'inline-block',
+          cursor: 'pointer',
+          verticalAlign: 'middle',
+        },
+        popover: {
+          position: 'absolute',
+          zIndex: '2',
+          marginTop: -340,
+        },
+        cover: {
+          position: 'fixed',
+          top: '0px',
+          right: '0px',
+          bottom: '0px',
+          left: '0px',
+        },
+      }
+
+      return (
+        <>
+          <div style={styles.swatch} onClick={this.handleClick}>
+            <div style={styles.color} />
+          </div>
+          {
+            this.state.displayColorPicker ? (
+              <div style={styles.popover}>
+                <div style={ styles.cover } onClick={this.handleClose}/>
+                <ReactColor.SketchPicker color={this.state.color} onChange={this.handleChange} />
+              </div>
+            ) : null
+          }
+        </>
+      )
+    }
+  }
+
+  function PencilIcon({ style }) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        style={style}
+        x="0"
+        y="0"
+        enableBackground="new 0 0 23.197 23.197"
+        version="1.1"
+        viewBox="0 0 23.197 23.197"
+        xmlSpace="preserve"
+      >
+        <path
+          fill="#090609"
+          d="M17.604 13.732L7.471 3.6l.724-.723 10.131 10.132-.722.723zM4.714 6.361L14.842 16.49l1.832-1.832L6.545 4.529 4.714 6.361zm-.926.925l-.91.909 10.127 10.132.909-.909L3.788 7.286zm15.236 6.42l-5.318 5.32 5.174 2.26 2.407-2.405-2.263-5.175zm4.14 8.94l-1.207-2.761a.397.397 0 00-.288-.229.404.404 0 00-.352.108l-1.555 1.556a.388.388 0 00-.107.352.391.391 0 00.229.287l2.762 1.205c.147.065.32.033.437-.08a.404.404 0 00.081-.438zM7.332 2.013L5.433.116a.392.392 0 00-.556 0L.115 4.877a.394.394 0 000 .557L2.012 7.33a.394.394 0 00.557 0l4.762-4.761a.395.395 0 00.001-.556z"
+        />
+      </svg>
+    )
+  }
+
+  function LineIcon({ style }) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        style={style}
+        x="0"
+        y="0"
+        enableBackground="new 0 0 512.001 512.001"
+        version="1.1"
+        viewBox="0 0 512.001 512.001"
+        xmlSpace="preserve"
+      >
+        <path d="M506.143 5.859c-7.811-7.811-20.475-7.811-28.285 0l-472 472c-7.811 7.811-7.811 20.474 0 28.284 3.905 3.906 9.024 5.858 14.142 5.858s10.237-1.953 14.143-5.858l472-472c7.811-7.81 7.811-20.473 0-28.284z" />
+      </svg>
+    )
+  }
+
+  const synchronizer = new function() {
+    let objects = []
+    let maxID = -1
+    let fakeIDCounter = 0
+    let needRedraw = true
+
+    function redraw(ctx, clearCanvas) {
+      needRedraw = false
+      clearCanvas()
+      objects.forEach(object => drawTools[object.kind].draw(ctx, object))
+    }
+
+    function load(object) {
+      if (object.id > maxID) { // insert new object
+        objects.push(object)
+        maxID = object.id
+      } else { // insert old object or update an existing object
+        const originObject = _.find(objects, { id: object.id })
+
+        if (originObject) {
+          _.merge(originObject, object) // update an existing object
+        } else {
+          objects.push(object) // insert old object
+          objects = _.sortBy(objects, 'id')
+        }
+      }
+
+      needRedraw = true
+    }
+
+    function save(object) {
+      let fakeID = `fake-${fakeIDCounter += 1}`
+      objects.push({ ...object, id: fakeID })
+
+      const params = { object }
+
+      $.ajax({
+        url: '/painters',
+        type: 'PUT',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: JSON.stringify(params),
+        success: ({ data }) => {
+          _.remove(objects, { id: fakeID })
+          load({ ...object, id: data.id })
+        },
+      })
+    }
+
+    return {
+      save,
+      load,
+      redraw,
+      set needRedraw(flag) { needRedraw = flag },
+      get needRedraw() { return needRedraw },
+    }
+  }
+
+  const KIND_PENCIL = 'pencil'
+  const KIND_LINE   = 'line'
+
+  const drawTools = _.keyBy([
+    new DrawToolPencil(),
+    new DrawToolLine(),
+  ], tool => tool.kind)
+
+  function DrawToolPencil() {
+    let currentPos, currentLineWidth, currentColor
+
+    const kind = KIND_PENCIL
+    const cmds = []
+
+    function serialize(selectedCmds) {
+      return {
+        kind,
+        cmds: selectedCmds,
+        width: currentLineWidth,
+        color: currentColor,
+        version: 1,
+      }
+    }
+
+    function draw(ctx, object) {
+      const { cmds, width, color } = object
+      if (cmds.length === 0) return
+
+      let fromX = cmds[0][0]
+      let fromY = cmds[0][1]
+
+      ctx.save()
+      ctx.lineWidth = width
+      ctx.strokeStyle = color
+      ctx.lineCap = 'round'
+
+      ctx.beginPath()
+      for(let i = 1; i < cmds.length; ++i) {
+        let diffX = cmds[i][0]
+        let diffY = cmds[i][1]
+        let toX = fromX + diffX
+        let toY = fromY + diffY
+        ctx.moveTo(fromX, fromY)
+        ctx.lineTo(toX, toY)
+
+        fromX = toX
+        fromY = toY
+      }
+
+      ctx.stroke()
+      ctx.closePath()
+      ctx.restore()
+    }
+
+    function save() {
+      synchronizer.save(serialize(cmds.splice(0, cmds.length)))
+    }
+
+    return {
+      kind,
+      draw,
+      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+        currentPos = cursorPos
+        currentLineWidth = lineWidth
+        currentColor = color
+        cmds.push([cursorPos.x, cursorPos.y])
+      },
+      onMouseMove: (ctx, cursorPos, _clearCanvas) => {
+        const diffX = cursorPos.x - currentPos.x
+        const diffY = cursorPos.y - currentPos.y
+        if (diffX === 0 && diffY === 0) return
+
+        cmds.push([diffX, diffY])
+        draw(ctx, serialize([[currentPos.x, currentPos.y], [diffX, diffY]]))
+        currentPos = cursorPos
+      },
+      onMouseUp: (_ctx, _cursorPos) => {
+        save()
+      },
+    }
+  }
+
+  function DrawToolLine() {
+    let startPos, endPos, currentLineWidth, currentColor
+
+    const kind = KIND_LINE
+
+    function serialize() {
+      return {
+        kind,
+        cmds: [[startPos.x, startPos.y], [endPos.x, endPos.y]],
+        width: currentLineWidth,
+        color: currentColor,
+        version: 1,
+      }
+    }
+
+    function draw(ctx, object) {
+      const { cmds, width, color } = object
+      if (cmds.length === 0) return
+
+      let fromX = cmds[0][0]
+      let fromY = cmds[0][1]
+      let toX = cmds[1][0]
+      let toY = cmds[1][1]
+
+      ctx.save()
+      ctx.lineWidth = width
+      ctx.strokeStyle = color
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(fromX, fromY)
+      ctx.lineTo(toX, toY)
+      ctx.stroke()
+      ctx.closePath()
+      ctx.restore()
+    }
+
+    function save() {
+      synchronizer.save(serialize())
+    }
+
+    return {
+      kind,
+      draw,
+      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+        startPos = cursorPos
+        currentLineWidth = lineWidth
+        currentColor = color
+      },
+      onMouseMove: (ctx, cursorPos, clearCanvas) => {
+        const diffX = cursorPos.x - startPos.x
+        const diffY = cursorPos.y - startPos.y
+        if (diffX === 0 && diffY === 0) return
+
+        endPos = cursorPos
+        clearCanvas()
+        draw(ctx, serialize())
+      },
+      onMouseUp: (_ctx, _cursorPos) => {
+        save()
+      },
+    }
+  }
+
+  function Painter(_props) {
+    const canvas1Ref = React.useRef()
+    const [canvas2BBox, canvas2Ref] = useBbox()
+    const [lineWidthRef, setLineWidth] = useRefState(3)
+    const [lineColorRef, setLineColor] = useRefState('black')
+    const getCtx1 = () => canvas1Ref.current?.getContext('2d')
+    const getCtx2 = () => canvas2Ref.current?.getContext('2d')
+    const [drawKindRef, setDrawKind] = useRefState(KIND_PENCIL)
+    const drawingToolRef = React.useRef(null)
+    const clearCanvas1 = () => { getCtx1().clearRect(0, 0, canvas1Ref.current.width, canvas1Ref.current.height) }
+    const clearCanvas2 = () => { getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height) }
+
+    React.useEffect(() => {
+      const channel = cable.subscriptions.create('PainterChannel', {
+        connected: () => console.log('connected'),
+        disconnected: () => console.log('disconnected'),
+        received: function(data){
+          synchronizer.load(data.object)
+        }
+      })
+
+      return () => {
+        channel.unsubscribe()
+      }
+    }, [])
+
+    React.useEffect(() => {
+      const looper = new AnimFrameLooper(25)
+
+      looper.start(() => {
+        if (synchronizer.needRedraw) synchronizer.redraw(getCtx1(), clearCanvas1)
+      })
+
+      return () => { redrawLoop.stop() }
+    }, [])
+
+    function calculatePos(e) {
+      return { x: Math.round(e.clientX - canvas2BBox.x), y: Math.round(e.clientY - canvas2BBox.y) }
+    }
+
+    function onMouseDown(e) {
+      if (drawingToolRef.current) return
+      drawingToolRef.current = drawTools[drawKindRef.current]
+      drawingToolRef.current.onMouseDown(getCtx2(), calculatePos(e), lineWidthRef.current, lineColorRef.current)
+    }
+
+    function onMouseMove(e) {
+      if (drawingToolRef.current == null) return
+      drawingToolRef.current.onMouseMove(getCtx2(), calculatePos(e), clearCanvas2)
+    }
+
+    function onMouseUp(e) {
+      if (drawingToolRef.current == null) return
+      drawingToolRef.current.onMouseUp(getCtx2(), calculatePos(e))
+      drawingToolRef.current = null
+
+      getCtx1().drawImage(canvas2Ref.current, 0, 0)
+      clearCanvas2()
+    }
+
+    return (
+      <div>
+        <div
+          style={
+            {
+              width: 640,
+              height: 480,
+              position: 'relative',
+              marginBottom: 5,
+              border: '1px solid black'
+            }
+          }
+        >
+          <canvas
+            width="640"
+            height="480"
+            style={ { position: 'absolute' } }
+            ref={canvas1Ref}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+          />
+          <canvas
+            width="640"
+            height="480"
+            style={ { position: 'absolute' } }
+            ref={canvas2Ref}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+          />
+        </div>
+        <div>
+          <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_PENCIL) }>
+            <PencilIcon
+              style={
+                {
+                  width: 24,
+                  height: 24,
+                  borderBottom: drawKindRef.current === KIND_PENCIL ? '2px solid red' : null,
+                  cursor: 'pointer',
+                  padding: '3px 6px',
+                }
+              }
+            />
+          </div>
+
+          <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_LINE) }>
+            <LineIcon
+              style={
+                {
+                  width: 24,
+                  height: 24,
+                  borderBottom: drawKindRef.current === KIND_LINE ? '2px solid red' : null,
+                  cursor: 'pointer',
+                  padding: '3px 6px',
+                }
+              }
+            />
+          </div>
+
+          <div>
+            粗細：
+            <input
+              type="number"
+              value={lineWidthRef.current}
+              min="1"
+              max="80"
+              onChange={e => setLineWidth(e.target.value)}
+            />
+          </div>
+          <div style={{ marginTop: 5 }}>
+            顏色：
+            <SketchExample
+              color={lineColorRef.current}
+              onChange={color => setLineColor(color.hex)}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  <%= @objects.to_json.html_safe %>.forEach(synchronizer.load)
+
+  ReactDOM.render(
+    <Painter />,
+    document.getElementById('root'),
+  )
+</script>
