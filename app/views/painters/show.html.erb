@@ -16,6 +16,34 @@
     )
   })()
 
+  function useWindowDimensions() {
+    const hasWindow = typeof window !== 'undefined';
+
+    function getWindowDimensions() {
+      const width = hasWindow ? window.innerWidth : null;
+      const height = hasWindow ? window.innerHeight : null;
+      return {
+        width,
+        height,
+      };
+    }
+
+    const [windowDimensions, setWindowDimensions] = React.useState(getWindowDimensions());
+
+    React.useEffect(() => {
+      if (hasWindow) {
+        function handleResize() {
+          setWindowDimensions(getWindowDimensions());
+        }
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+      }
+    }, [hasWindow]);
+
+    return windowDimensions;
+  }
+
   function AnimFrameLooper(interval){
     var loopId = 0
     var prevTime = Date.now()
@@ -391,6 +419,7 @@
   }
 
   function Painter(_props) {
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions()
     const canvas1Ref = React.useRef()
     const [canvas2BBox, canvas2Ref] = useBbox()
     const [lineWidthRef, setLineWidth] = useRefState(3)
@@ -455,17 +484,17 @@
         <div
           style={
             {
-              width: 640,
-              height: 480,
-              position: 'relative',
-              marginBottom: 5,
-              border: '1px solid black'
+              position: 'fixed',
+              width: windowWidth,
+              height: windowHeight,
+              left: 0,
+              top: 0,
             }
           }
         >
           <canvas
-            width="640"
-            height="480"
+            width={windowWidth}
+            height={windowHeight}
             style={ { position: 'absolute' } }
             ref={canvas1Ref}
             onMouseDown={onMouseDown}
@@ -473,8 +502,8 @@
             onMouseUp={onMouseUp}
           />
           <canvas
-            width="640"
-            height="480"
+            width={windowWidth}
+            height={windowHeight}
             style={ { position: 'absolute' } }
             ref={canvas2Ref}
             onMouseDown={onMouseDown}
@@ -482,7 +511,7 @@
             onMouseUp={onMouseUp}
           />
         </div>
-        <div>
+        <div style={ { position: 'fixed', backgroundColor: '#f5f5f5', padding: 10 } }>
           <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_PENCIL) }>
             <PencilIcon
               style={
