@@ -16,6 +16,8 @@
     )
   })()
 
+  window.addEventListener('wheel', e => e.preventDefault(), { passive: false }) // Fix passive event listener in chrome
+
   function useWindowDimensions() {
     const hasWindow = typeof window !== 'undefined';
 
