@@ -505,6 +505,7 @@
     }
 
     function onMouseWheel(event) {
+      if (drawingToolRef.current) return // disable dragging when he is using tool
       viewBoxManager.addXY(event.deltaX, -event.deltaY)
     }
 
