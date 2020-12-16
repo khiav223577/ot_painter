@@ -297,7 +297,7 @@
       get y() { return currentY },
       get scale() { return currentScale },
       addXY(diffX, diffY) { setXY(currentX + diffX, currentY + diffY) },
-      applyScale(sign, ox, oy) { setScale(sign ? currentScale * 1.01 : currentScale / 1.01, ox, oy) },
+      applyScale(sign, ox, oy) { setScale(sign ? currentScale * 1.04 : currentScale / 1.04, ox, oy) },
     }
   }
 
