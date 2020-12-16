@@ -285,8 +285,8 @@
     }
 
     function setScale(scale, ox, oy) {
-      currentX += (currentScale - scale) * ox
-      currentY += (currentScale - scale) * oy
+      currentX += (1 / currentScale - 1 / scale) * ox
+      currentY += (1 / currentScale - 1 / scale) * oy
 
       currentScale = scale
       synchronizer.needRedraw = true
