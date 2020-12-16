@@ -520,7 +520,7 @@
         if (event.deltaY === 0) return
         viewBoxManager.applyScale(event.deltaY > 0)
       } else {
-        viewBoxManager.addXY(event.deltaX, -event.deltaY)
+        viewBoxManager.addXY(event.deltaX * viewBoxManager.scale, -event.deltaY * viewBoxManager.scale)
       }
 
       event.preventDefault()
