@@ -491,8 +491,8 @@
 
     function calculatePos(e) {
       return {
-        x: Math.round(e.clientX - canvas2BBoxRef.current.x + viewBoxManager.x),
-        y: Math.round(e.clientY - canvas2BBoxRef.current.y + viewBoxManager.y),
+        x: Math.round((e.clientX - canvas2BBoxRef.current.x) / viewBoxManager.scale + viewBoxManager.x),
+        y: Math.round((e.clientY - canvas2BBoxRef.current.y) / viewBoxManager.scale + viewBoxManager.y),
       }
     }
 
