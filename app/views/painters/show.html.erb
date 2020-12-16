@@ -468,7 +468,7 @@
     }, [])
 
     React.useEffect(() => {
-      const looper = new AnimFrameLooper(25)
+      const looper = new AnimFrameLooper(1000 / 60)
 
       looper.start(() => {
         if (synchronizer.needRedraw) synchronizer.redraw(getCtx1(), clearCanvas1)
