@@ -317,8 +317,8 @@
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
-      let fromX = cmds[0][0]
-      let fromY = cmds[0][1]
+      let fromX = cmds[0][0] - viewBoxManager.x
+      let fromY = cmds[0][1] - viewBoxManager.y
 
       ctx.save()
       ctx.lineWidth = width
@@ -331,8 +331,8 @@
         let diffY = cmds[i][1]
         let toX = fromX + diffX
         let toY = fromY + diffY
-        ctx.moveTo(fromX - viewBoxManager.x, fromY - viewBoxManager.y)
-        ctx.lineTo(toX - viewBoxManager.x, toY - viewBoxManager.y)
+        ctx.moveTo(fromX, fromY)
+        ctx.lineTo(toX, toY)
 
         fromX = toX
         fromY = toY
@@ -390,18 +390,18 @@
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
-      let fromX = cmds[0][0]
-      let fromY = cmds[0][1]
-      let toX = cmds[1][0]
-      let toY = cmds[1][1]
+      let fromX = cmds[0][0] - viewBoxManager.x
+      let fromY = cmds[0][1] - viewBoxManager.y
+      let toX = cmds[1][0] - viewBoxManager.x
+      let toY = cmds[1][1] - viewBoxManager.y
 
       ctx.save()
       ctx.lineWidth = width
       ctx.strokeStyle = color
       ctx.lineCap = 'round'
       ctx.beginPath()
-      ctx.moveTo(fromX - viewBoxManager.x, fromY - viewBoxManager.y)
-      ctx.lineTo(toX - viewBoxManager.x, toY - viewBoxManager.y)
+      ctx.moveTo(fromX, fromY)
+      ctx.lineTo(toX, toY)
       ctx.stroke()
       ctx.closePath()
       ctx.restore()
@@ -478,7 +478,10 @@
     }, [])
 
     function calculatePos(e) {
-      return { x: Math.round(e.clientX - canvas2BBox.x), y: Math.round(e.clientY - canvas2BBox.y) }
+      return {
+        x: Math.round(e.clientX - canvas2BBox.x + viewBoxManager.x),
+        y: Math.round(e.clientY - canvas2BBox.y + viewBoxManager.y),
+      }
     }
 
     function onMouseDown(e) {
