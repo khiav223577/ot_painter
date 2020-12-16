@@ -428,6 +428,7 @@
       draw,
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         startPos = cursorPos
+        endPos = null
         currentLineWidth = lineWidth
         currentColor = color
       },
@@ -441,6 +442,7 @@
         draw(ctx, serialize())
       },
       onMouseUp: (_ctx, _cursorPos) => {
+        if (endPos == null) return
         save()
       },
     }
