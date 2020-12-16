@@ -276,7 +276,7 @@
   }
 
   const viewBoxManager = new function() {
-    let currentX = 0, currentY = 0
+    let currentX = 0, currentY = 0, currentScale = 1
 
     function setXY(x, y) {
       currentX = x
@@ -284,10 +284,17 @@
       synchronizer.needRedraw = true
     }
 
+    function setScale(scale) {
+      currentScale = scale
+      synchronizer.needRedraw = true
+    }
+
     return {
       get x() { return currentX },
       get y() { return currentY },
+      get scale() { return currentScale },
       addXY(diffX, diffY) { setXY(currentX + diffX, currentY + diffY) },
+      applyScale(sign) { setScale(sign ? currentScale * 1.01 : currentScale / 1.01) },
     }
   }
 
@@ -319,11 +326,11 @@
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
-      let fromX = cmds[0][0] - viewBoxManager.x
-      let fromY = cmds[0][1] - viewBoxManager.y
+      let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
+      let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
 
       ctx.save()
-      ctx.lineWidth = width
+      ctx.lineWidth = width * viewBoxManager.scale
       ctx.strokeStyle = color
       ctx.lineCap = 'round'
 
@@ -392,13 +399,13 @@
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
-      let fromX = cmds[0][0] - viewBoxManager.x
-      let fromY = cmds[0][1] - viewBoxManager.y
-      let toX = cmds[1][0] - viewBoxManager.x
-      let toY = cmds[1][1] - viewBoxManager.y
+      let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
+      let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
+      let toX = (cmds[1][0] - viewBoxManager.x) * viewBoxManager.scale
+      let toY = (cmds[1][1] - viewBoxManager.y) * viewBoxManager.scale
 
       ctx.save()
-      ctx.lineWidth = width
+      ctx.lineWidth = width * viewBoxManager.scale
       ctx.strokeStyle = color
       ctx.lineCap = 'round'
       ctx.beginPath()
@@ -508,7 +515,15 @@
 
     function onMouseWheel(event) {
       if (drawingToolRef.current) return // disable dragging when he is using tool
-      viewBoxManager.addXY(event.deltaX, -event.deltaY)
+
+      if (event.ctrlKey) {
+        if (event.deltaY === 0) return
+        viewBoxManager.applyScale(event.deltaY > 0)
+      } else {
+        viewBoxManager.addXY(event.deltaX, -event.deltaY)
+      }
+
+      event.preventDefault()
     }
 
     return (
