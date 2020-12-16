@@ -338,8 +338,8 @@
       for(let i = 1; i < cmds.length; ++i) {
         let diffX = cmds[i][0]
         let diffY = cmds[i][1]
-        let toX = fromX + diffX
-        let toY = fromY + diffY
+        let toX = fromX + diffX * viewBoxManager.scale
+        let toY = fromY + diffY * viewBoxManager.scale
         ctx.moveTo(fromX, fromY)
         ctx.lineTo(toX, toY)
 
