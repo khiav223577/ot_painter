@@ -326,16 +326,25 @@
   ], tool => tool.kind)
 
   function DrawToolCursor() {
+    let currentPos
     const kind = KIND_CURSOR
 
     return {
       kind,
       draw: null,
-      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+      onMouseDown: (_ctx, cursorPos, _lineWidth, _color) => {
+        currentPos = cursorPos
       },
-      onMouseMove: (ctx, cursorPos, clearCanvas) => {
+      onMouseMove: (_ctx, cursorPos, _clearCanvas) => {
+        const diffX = cursorPos.x - currentPos.x
+        const diffY = cursorPos.y - currentPos.y
+        if (diffX === 0 && diffY === 0) return
+
+        currentPos = cursorPos
+        viewBoxManager.addXY(-diffX, -diffY)
       },
       onMouseUp: (_ctx, _cursorPos) => {
+        currentPos = null
       },
     }
   }
@@ -487,7 +496,7 @@
     const [lineColorRef, setLineColor] = useRefState('black')
     const getCtx1 = () => canvas1Ref.current?.getContext('2d')
     const getCtx2 = () => canvas2Ref.current?.getContext('2d')
-    const [drawKindRef, setDrawKind] = useRefState(KIND_PENCIL)
+    const [drawKindRef, setDrawKind] = useRefState(KIND_CURSOR)
     const drawingToolRef = React.useRef(null)
     const clearCanvas1 = () => { getCtx1().clearRect(0, 0, canvas1Ref.current.width, canvas1Ref.current.height) }
     const clearCanvas2 = () => { getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height) }
