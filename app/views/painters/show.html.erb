@@ -179,6 +179,20 @@
     }
   }
 
+  function CursorIcon({ style }) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        style={style}
+        width="26"
+        height="26"
+        viewBox="0 0 26 26"
+      >
+        <path d="M7 2.016l13.16 12.328-5.375.484-.976.09.406.895 3.262 7.144-2.407 1.059-3.113-7.223-.39-.91-.723.68-3.817 3.582L7 2.015m0-2a2 2 0 00-2 2l.027 18.13a2.002 2.002 0 001.996 1.996c.5 0 .993-.188 1.372-.54l2.46-2.312 2.38 5.516c.21.492.609.875 1.105 1.07a1.96 1.96 0 001.535-.031l2.406-1.059a1.99 1.99 0 001.063-1.117c.191-.5.176-1.055-.047-1.543l-2.5-5.469 3.543-.324a1.997 1.997 0 001.188-3.45L8.367.556A1.996 1.996 0 007 .015z"></path>
+      </svg>
+    )
+  }
+
   function PencilIcon({ style }) {
     return (
       <svg
@@ -301,13 +315,30 @@
     }
   }
 
+  const KIND_CURSOR = 'cursor'
   const KIND_PENCIL = 'pencil'
   const KIND_LINE   = 'line'
 
   const drawTools = _.keyBy([
+    new DrawToolCursor(),
     new DrawToolPencil(),
     new DrawToolLine(),
   ], tool => tool.kind)
+
+  function DrawToolCursor() {
+    const kind = KIND_CURSOR
+
+    return {
+      kind,
+      draw: null,
+      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+      },
+      onMouseMove: (ctx, cursorPos, clearCanvas) => {
+      },
+      onMouseUp: (_ctx, _cursorPos) => {
+      },
+    }
+  }
 
   function DrawToolPencil() {
     let currentPos, currentLineWidth, currentColor
@@ -571,6 +602,20 @@
           />
         </div>
         <div style={ { position: 'fixed', backgroundColor: '#f5f5f5', padding: 10 } }>
+          <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_CURSOR) }>
+            <CursorIcon
+              style={
+                {
+                  width: 24,
+                  height: 24,
+                  borderBottom: drawKindRef.current === KIND_CURSOR ? '2px solid red' : null,
+                  cursor: 'pointer',
+                  padding: '3px 6px',
+                }
+              }
+            />
+          </div>
+
           <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_PENCIL) }>
             <PencilIcon
               style={
