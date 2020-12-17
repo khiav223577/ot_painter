@@ -328,6 +328,7 @@
   function DrawToolCursor() {
     let currentPos
     const kind = KIND_CURSOR
+    let prevDiffX = 0, prevDiffY = 0
 
     return {
       kind,
@@ -340,8 +341,9 @@
         const diffY = cursorPos.y - currentPos.y
         if (diffX === 0 && diffY === 0) return
 
-        currentPos = cursorPos
-        viewBoxManager.addXY(-diffX, -diffY)
+        viewBoxManager.addXY(-prevDiffX - diffX, -prevDiffY - diffY)
+        prevDiffX = diffX
+        prevDiffX = diffY
       },
       onMouseUp: (_ctx, _cursorPos) => {
         currentPos = null
