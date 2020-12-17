@@ -367,12 +367,34 @@
       }
     }
 
+    function getPoints(cmds) {
+      if (cmds.length === 0) return []
+
+      let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
+      let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
+
+      const result = [[fromX, fromY]]
+
+      for(let i = 1; i < cmds.length; ++i) {
+        let diffX = cmds[i][0]
+        let diffY = cmds[i][1]
+        let toX = fromX + diffX * viewBoxManager.scale
+        let toY = fromY + diffY * viewBoxManager.scale
+        result.push([toX, toY])
+
+        fromX = toX
+        fromY = toY
+      }
+
+      return result
+    }
+
     function draw(ctx, object) {
       const { cmds, width, color } = object
       if (cmds.length === 0) return
 
-      let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
-      let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
+      const points = getPoints(cmds)
+      let fromPoint
 
       ctx.save()
       ctx.lineWidth = width * viewBoxManager.scale
@@ -380,16 +402,15 @@
       ctx.lineCap = 'round'
 
       ctx.beginPath()
-      for(let i = 1; i < cmds.length; ++i) {
-        let diffX = cmds[i][0]
-        let diffY = cmds[i][1]
-        let toX = fromX + diffX * viewBoxManager.scale
-        let toY = fromY + diffY * viewBoxManager.scale
-        ctx.moveTo(fromX, fromY)
-        ctx.lineTo(toX, toY)
+      for(let i = 0; i < points.length; ++i) {
+        let toPoint = points[i]
 
-        fromX = toX
-        fromY = toY
+        if (fromPoint) {
+          ctx.moveTo(fromPoint[0], fromPoint[1])
+          ctx.lineTo(toPoint[0], toPoint[1])
+        }
+
+        fromPoint = toPoint
       }
 
       ctx.stroke()
