@@ -81,15 +81,16 @@
     }
   }
 
-  const useRefState = (initialValue) => {
+  const useRefState = (initialValue, callback) => {
     const [state, setState] = React.useState(initialValue)
     const stateRef = React.useRef(state)
     return [
       stateRef,
       (state) => {
+        if (callback) callback(stateRef.current, state)
         stateRef.current = state
         setState(state)
-      }
+      },
     ]
   }
 
@@ -179,6 +180,20 @@
     }
   }
 
+  function CursorIcon({ style }) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        style={style}
+        width="26"
+        height="26"
+        viewBox="0 0 26 26"
+      >
+        <path d="M7 2.016l13.16 12.328-5.375.484-.976.09.406.895 3.262 7.144-2.407 1.059-3.113-7.223-.39-.91-.723.68-3.817 3.582L7 2.015m0-2a2 2 0 00-2 2l.027 18.13a2.002 2.002 0 001.996 1.996c.5 0 .993-.188 1.372-.54l2.46-2.312 2.38 5.516c.21.492.609.875 1.105 1.07a1.96 1.96 0 001.535-.031l2.406-1.059a1.99 1.99 0 001.063-1.117c.191-.5.176-1.055-.047-1.543l-2.5-5.469 3.543-.324a1.997 1.997 0 001.188-3.45L8.367.556A1.996 1.996 0 007 .015z"></path>
+      </svg>
+    )
+  }
+
   function PencilIcon({ style }) {
     return (
       <svg
@@ -216,16 +231,44 @@
     )
   }
 
+  function Rect(x, y, w, h) {
+    function isPointInside(tx, ty) {
+      if (tx < x) return false
+      if (ty < y) return false
+      if (tx > x + w) return false
+      if (ty > y + h) return false
+      return true
+    }
+
+    return { x, y, w, h, isPointInside }
+  }
+
   const synchronizer = new function() {
     let objects = []
     let maxID = -1
     let fakeIDCounter = 0
     let needRedraw = false
+    let showingRectIds = {}
 
     function redraw(ctx, clearCanvas) {
       needRedraw = false
       clearCanvas()
-      objects.forEach(object => drawTools[object.kind].draw(ctx, object))
+      objects.forEach((object) => {
+        const tool = drawTools[object.kind]
+        tool.draw(ctx, object)
+
+        if (showingRectIds[object.id]) {
+          const rect = tool.boundingBox(object)
+          ctx.save()
+          ctx.beginPath()
+          ctx.setLineDash([5, 10])
+          ctx.lineWidth = 2
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.3 )'
+          ctx.rect(rect.x, rect.y, rect.w, rect.h);
+          ctx.stroke();
+          ctx.restore()
+        }
+      })
     }
 
     function load(object) {
@@ -247,29 +290,56 @@
     }
 
     function save(object) {
-      let fakeID = `fake-${fakeIDCounter += 1}`
-      objects.push({ ...object, id: fakeID })
-
       const params = { object }
 
-      $.ajax({
-        url: '/painters',
-        type: 'PUT',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        data: JSON.stringify(params),
-        success: ({ data }) => {
-          _.remove(objects, { id: fakeID })
-          load({ ...object, id: data.id })
-        },
-      })
+      if (object.id === Number(object.id)) {
+        $.ajax({
+          url: '/painters',
+          type: 'PUT',
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: JSON.stringify(params),
+          success: ({ data }) => {
+            load(object)
+          },
+        })
+      } else {
+        let fakeID = `fake-${fakeIDCounter += 1}`
+        objects.push({ ...object, id: fakeID })
+
+        $.ajax({
+          url: '/painters',
+          type: 'POST',
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: JSON.stringify(params),
+          success: ({ data }) => {
+            _.remove(objects, { id: fakeID })
+            load({ ...object, id: data.id })
+          },
+        })
+      }
+    }
+
+    function pickTopObjectAt(x, y) {
+      for(let i = objects.length - 1; i >= 0; i--) {
+        const object = objects[i]
+        const rect = drawTools[object.kind].boundingBox(object)
+        if (rect.isPointInside(x, y)) return object
+      }
+
+      return null
     }
 
     return {
       save,
       load,
       redraw,
+      pickTopObjectAt,
+      showRect(object) { showingRectIds[object.id] = true },
+      hideRect(object) { delete showingRectIds[object.id] },
       set needRedraw(flag) { needRedraw = flag },
       get needRedraw() { return needRedraw },
     }
@@ -301,13 +371,95 @@
     }
   }
 
+  const KIND_CURSOR = 'cursor'
   const KIND_PENCIL = 'pencil'
   const KIND_LINE   = 'line'
 
   const drawTools = _.keyBy([
+    new DrawToolCursor(),
     new DrawToolPencil(),
     new DrawToolLine(),
   ], tool => tool.kind)
+
+  function drawLine(ctx, points, width, color) {
+    if (points.length === 0) return
+
+    let fromPoint
+
+    ctx.save()
+    ctx.lineWidth = width * viewBoxManager.scale
+    ctx.strokeStyle = color
+    ctx.lineCap = 'round'
+
+    ctx.beginPath()
+    for(let i = 0; i < points.length; ++i) {
+      let toPoint = points[i]
+
+      if (fromPoint) {
+        ctx.moveTo(fromPoint[0], fromPoint[1])
+        ctx.lineTo(toPoint[0], toPoint[1])
+      }
+
+      fromPoint = toPoint
+    }
+
+    ctx.stroke()
+    ctx.closePath()
+    ctx.restore()
+  }
+
+  function DrawToolCursor() {
+    let currentPos
+    let targetObject
+    const kind = KIND_CURSOR
+    let prevDiffX = 0, prevDiffY = 0
+
+    function deselectTargetObject() {
+      if (targetObject == null) return
+
+      synchronizer.hideRect(targetObject)
+      synchronizer.save(targetObject)
+    }
+
+    return {
+      kind,
+      draw: null,
+      onMouseDown: (_ctx, cursorPos, _lineWidth, _color) => {
+        prevDiffX = 0
+        prevDiffY = 0
+        currentPos = cursorPos
+
+        deselectTargetObject(true)
+        targetObject = synchronizer.pickTopObjectAt(
+          (cursorPos.x - viewBoxManager.x) * viewBoxManager.scale,
+          (cursorPos.y - viewBoxManager.y) * viewBoxManager.scale
+        )
+
+        if (targetObject) synchronizer.showRect(targetObject)
+      },
+      onMouseMove: (_ctx, cursorPos, _clearCanvas) => {
+        const diffX = cursorPos.x - currentPos.x
+        const diffY = cursorPos.y - currentPos.y
+        if (diffX === 0 && diffY === 0) return
+
+        if (targetObject) {
+          drawTools[targetObject.kind].addXY(targetObject, -prevDiffX + diffX, -prevDiffY + diffY)
+        } else {
+          viewBoxManager.addXY(-diffX, -diffY)
+        }
+
+        prevDiffX = diffX
+        prevDiffY = diffY
+      },
+      onMouseUp: (_ctx, _cursorPos) => {
+        currentPos = null
+        deselectTargetObject()
+      },
+      onToolChange() {
+        deselectTargetObject()
+      },
+    }
+  }
 
   function DrawToolPencil() {
     let currentPos, currentLineWidth, currentColor
@@ -325,34 +477,31 @@
       }
     }
 
-    function draw(ctx, object) {
-      const { cmds, width, color } = object
-      if (cmds.length === 0) return
+    function getPoints(cmds) {
+      if (cmds.length === 0) return []
 
       let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
       let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
 
-      ctx.save()
-      ctx.lineWidth = width * viewBoxManager.scale
-      ctx.strokeStyle = color
-      ctx.lineCap = 'round'
+      const result = [[fromX, fromY]]
 
-      ctx.beginPath()
       for(let i = 1; i < cmds.length; ++i) {
         let diffX = cmds[i][0]
         let diffY = cmds[i][1]
         let toX = fromX + diffX * viewBoxManager.scale
         let toY = fromY + diffY * viewBoxManager.scale
-        ctx.moveTo(fromX, fromY)
-        ctx.lineTo(toX, toY)
+        result.push([toX, toY])
 
         fromX = toX
         fromY = toY
       }
 
-      ctx.stroke()
-      ctx.closePath()
-      ctx.restore()
+      return result
+    }
+
+    function draw(ctx, object) {
+      const { cmds, width, color } = object
+      drawLine(ctx, getPoints(cmds), width, color)
     }
 
     function save() {
@@ -362,6 +511,26 @@
     return {
       kind,
       draw,
+      addXY(object, diffX, diffY) {
+        object.cmds[0][0] += diffX
+        object.cmds[0][1] += diffY
+        synchronizer.needRedraw = true
+      },
+      boundingBox: (object) => {
+        const points = getPoints(object.cmds)
+        const xs = _(points).map(point => point[0])
+        const ys = _(points).map(point => point[1])
+        const minX = xs.min()
+        const maxX = xs.max()
+        const minY = ys.min()
+        const maxY = ys.max()
+        return Rect(
+          minX - object.width / 2,
+          minY - object.width / 2,
+          maxX - minX + object.width,
+          maxY - minY + object.width,
+        )
+      },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         currentPos = cursorPos
         currentLineWidth = lineWidth
@@ -379,6 +548,8 @@
       },
       onMouseUp: (_ctx, _cursorPos) => {
         save()
+      },
+      onToolChange() {
       },
     }
   }
@@ -398,25 +569,19 @@
       }
     }
 
-    function draw(ctx, object) {
-      const { cmds, width, color } = object
-      if (cmds.length === 0) return
+    function getPoints(cmds) {
+      if (cmds.length === 0) return []
 
       let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
       let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
       let toX = (cmds[1][0] - viewBoxManager.x) * viewBoxManager.scale
       let toY = (cmds[1][1] - viewBoxManager.y) * viewBoxManager.scale
+      return [[fromX, fromY], [toX, toY]]
+    }
 
-      ctx.save()
-      ctx.lineWidth = width * viewBoxManager.scale
-      ctx.strokeStyle = color
-      ctx.lineCap = 'round'
-      ctx.beginPath()
-      ctx.moveTo(fromX, fromY)
-      ctx.lineTo(toX, toY)
-      ctx.stroke()
-      ctx.closePath()
-      ctx.restore()
+    function draw(ctx, object) {
+      const { cmds, width, color } = object
+      drawLine(ctx, getPoints(cmds), width, color)
     }
 
     function save() {
@@ -426,6 +591,28 @@
     return {
       kind,
       draw,
+      addXY(object, diffX, diffY) {
+        object.cmds[0][0] += diffX
+        object.cmds[0][1] += diffY
+        object.cmds[1][0] += diffX
+        object.cmds[1][1] += diffY
+        synchronizer.needRedraw = true
+      },
+      boundingBox: (object) => {
+        const points = getPoints(object.cmds)
+        const xs = _(points).map(point => point[0])
+        const ys = _(points).map(point => point[1])
+        const minX = xs.min()
+        const maxX = xs.max()
+        const minY = ys.min()
+        const maxY = ys.max()
+        return Rect(
+          minX - object.width / 2,
+          minY - object.width / 2,
+          maxX - minX + object.width,
+          maxY - minY + object.width,
+        )
+      },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         startPos = cursorPos
         endPos = null
@@ -445,6 +632,8 @@
         if (endPos == null) return
         save()
       },
+      onToolChange() {
+      },
     }
   }
 
@@ -456,10 +645,14 @@
     const [lineColorRef, setLineColor] = useRefState('black')
     const getCtx1 = () => canvas1Ref.current?.getContext('2d')
     const getCtx2 = () => canvas2Ref.current?.getContext('2d')
-    const [drawKindRef, setDrawKind] = useRefState(KIND_PENCIL)
+    const [drawKindRef, setDrawKind] = useRefState(KIND_CURSOR, onDrawKindChange)
     const drawingToolRef = React.useRef(null)
     const clearCanvas1 = () => { getCtx1().clearRect(0, 0, canvas1Ref.current.width, canvas1Ref.current.height) }
     const clearCanvas2 = () => { getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height) }
+
+    function onDrawKindChange(oldKind, _newKind) {
+      drawTools[oldKind].onToolChange()
+    }
 
     React.useEffect(() => {
       const channel = cable.subscriptions.create('PainterChannel', {
@@ -571,6 +764,20 @@
           />
         </div>
         <div style={ { position: 'fixed', backgroundColor: '#f5f5f5', padding: 10 } }>
+          <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_CURSOR) }>
+            <CursorIcon
+              style={
+                {
+                  width: 24,
+                  height: 24,
+                  borderBottom: drawKindRef.current === KIND_CURSOR ? '2px solid red' : null,
+                  cursor: 'pointer',
+                  padding: '3px 6px',
+                }
+              }
+            />
+          </div>
+
           <div style={{ display: 'inline-block' }} onClick={_ => setDrawKind(KIND_PENCIL) }>
             <PencilIcon
               style={
@@ -606,7 +813,7 @@
               value={lineWidthRef.current}
               min="1"
               max="80"
-              onChange={e => setLineWidth(e.target.value)}
+              onChange={e => setLineWidth(Number(e.target.value))}
             />
           </div>
           <div style={{ marginTop: 5 }}>
