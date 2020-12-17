@@ -11,7 +11,7 @@ class PaintersController < ActionController::Base
     end
   end
 
-  def update
+  def create
     return render_error('invalid params') if params[:object] == nil
 
     object = params[:object].slice(:kind, :cmds, :version, :width, :color)

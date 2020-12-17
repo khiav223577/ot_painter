@@ -1,3 +1,3 @@
 Rails.application.routes.draw do
-  resource :painters, only: [:show, :update]
+  resource :painters, only: [:show, :create]
 end
