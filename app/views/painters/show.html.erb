@@ -81,15 +81,16 @@
     }
   }
 
-  const useRefState = (initialValue) => {
+  const useRefState = (initialValue, callback) => {
     const [state, setState] = React.useState(initialValue)
     const stateRef = React.useRef(state)
     return [
       stateRef,
       (state) => {
+        if (callback) callback(stateRef.current, state)
         stateRef.current = state
         setState(state)
-      }
+      },
     ]
   }
 
@@ -247,6 +248,7 @@
     let maxID = -1
     let fakeIDCounter = 0
     let needRedraw = false
+    let showingRectIds = {}
 
     function redraw(ctx, clearCanvas) {
       needRedraw = false
@@ -255,15 +257,17 @@
         const tool = drawTools[object.kind]
         tool.draw(ctx, object)
 
-        const rect = tool.boundingBox(object)
-        ctx.save()
-        ctx.beginPath()
-        ctx.setLineDash([5, 10])
-        ctx.lineWidth = 2
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3 )'
-        ctx.rect(rect.x, rect.y, rect.w, rect.h);
-        ctx.stroke();
-        ctx.restore()
+        if (showingRectIds[object.id]) {
+          const rect = tool.boundingBox(object)
+          ctx.save()
+          ctx.beginPath()
+          ctx.setLineDash([5, 10])
+          ctx.lineWidth = 2
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.3 )'
+          ctx.rect(rect.x, rect.y, rect.w, rect.h);
+          ctx.stroke();
+          ctx.restore()
+        }
       })
     }
 
@@ -320,6 +324,8 @@
       load,
       redraw,
       pickTopObjectAt,
+      showRect(object) { showingRectIds[object.id] = true },
+      hideRect(object) { delete showingRectIds[object.id] },
       set needRedraw(flag) { needRedraw = flag },
       get needRedraw() { return needRedraw },
     }
@@ -401,10 +407,15 @@
         prevDiffX = 0
         prevDiffY = 0
         currentPos = cursorPos
+
+        if (targetObject) synchronizer.hideRect(targetObject)
+
         targetObject = synchronizer.pickTopObjectAt(
           (cursorPos.x - viewBoxManager.x) * viewBoxManager.scale,
           (cursorPos.y - viewBoxManager.y) * viewBoxManager.scale
         )
+
+        if (targetObject) synchronizer.showRect(targetObject)
       },
       onMouseMove: (_ctx, cursorPos, _clearCanvas) => {
         const diffX = cursorPos.x - currentPos.x
@@ -422,6 +433,9 @@
       },
       onMouseUp: (_ctx, _cursorPos) => {
         currentPos = null
+      },
+      onToolChange() {
+        if (targetObject) synchronizer.hideRect(targetObject)
         targetObject = null
       },
     }
@@ -510,6 +524,8 @@
       onMouseUp: (_ctx, _cursorPos) => {
         save()
       },
+      onToolChange() {
+      },
     }
   }
 
@@ -586,6 +602,8 @@
         if (endPos == null) return
         save()
       },
+      onToolChange() {
+      },
     }
   }
 
@@ -597,10 +615,14 @@
     const [lineColorRef, setLineColor] = useRefState('black')
     const getCtx1 = () => canvas1Ref.current?.getContext('2d')
     const getCtx2 = () => canvas2Ref.current?.getContext('2d')
-    const [drawKindRef, setDrawKind] = useRefState(KIND_CURSOR)
+    const [drawKindRef, setDrawKind] = useRefState(KIND_CURSOR, onDrawKindChange)
     const drawingToolRef = React.useRef(null)
     const clearCanvas1 = () => { getCtx1().clearRect(0, 0, canvas1Ref.current.width, canvas1Ref.current.height) }
     const clearCanvas2 = () => { getCtx2().clearRect(0, 0, canvas2Ref.current.width, canvas2Ref.current.height) }
+
+    function onDrawKindChange(oldKind, _newKind) {
+      drawTools[oldKind].onToolChange()
+    }
 
     React.useEffect(() => {
       const channel = cable.subscriptions.create('PainterChannel', {
