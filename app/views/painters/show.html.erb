@@ -290,23 +290,37 @@
     }
 
     function save(object) {
-      let fakeID = `fake-${fakeIDCounter += 1}`
-      objects.push({ ...object, id: fakeID })
-
       const params = { object }
 
-      $.ajax({
-        url: '/painters',
-        type: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        data: JSON.stringify(params),
-        success: ({ data }) => {
-          _.remove(objects, { id: fakeID })
-          load({ ...object, id: data.id })
-        },
-      })
+      if (object.id === Number(object.id)) {
+        $.ajax({
+          url: '/painters',
+          type: 'PUT',
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: JSON.stringify(params),
+          success: ({ data }) => {
+            load(object)
+          },
+        })
+      } else {
+        let fakeID = `fake-${fakeIDCounter += 1}`
+        objects.push({ ...object, id: fakeID })
+
+        $.ajax({
+          url: '/painters',
+          type: 'POST',
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: JSON.stringify(params),
+          success: ({ data }) => {
+            _.remove(objects, { id: fakeID })
+            load({ ...object, id: data.id })
+          },
+        })
+      }
     }
 
     function pickTopObjectAt(x, y) {
@@ -400,6 +414,13 @@
     const kind = KIND_CURSOR
     let prevDiffX = 0, prevDiffY = 0
 
+    function deselectTargetObject() {
+      if (targetObject == null) return
+
+      synchronizer.hideRect(targetObject)
+      synchronizer.save(targetObject)
+    }
+
     return {
       kind,
       draw: null,
@@ -408,8 +429,7 @@
         prevDiffY = 0
         currentPos = cursorPos
 
-        if (targetObject) synchronizer.hideRect(targetObject)
-
+        deselectTargetObject(true)
         targetObject = synchronizer.pickTopObjectAt(
           (cursorPos.x - viewBoxManager.x) * viewBoxManager.scale,
           (cursorPos.y - viewBoxManager.y) * viewBoxManager.scale
@@ -433,10 +453,10 @@
       },
       onMouseUp: (_ctx, _cursorPos) => {
         currentPos = null
+        deselectTargetObject()
       },
       onToolChange() {
-        if (targetObject) synchronizer.hideRect(targetObject)
-        targetObject = null
+        deselectTargetObject()
       },
     }
   }

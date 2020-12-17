@@ -32,6 +32,27 @@ class PaintersController < ActionController::Base
     }
   end
 
+  def update
+    return render_error('invalid params') if params[:object] == nil
+
+    id = params[:object][:id].to_i
+    object = $objects[id - 1]
+    return render json: { data: {} } if object == nil
+
+    object.merge!(params[:object].slice(:cmds, :version, :width, :color).permit!)
+
+    ActionCable.server.broadcast(
+      'painter_channel',
+      object: object,
+    )
+
+    render json: {
+      data: {
+        id: id,
+      },
+    }
+  end
+
   private
 
   def render_error(*errors, status: :bad_request)
