@@ -361,6 +361,33 @@
     new DrawToolLine(),
   ], tool => tool.kind)
 
+  function drawLine(ctx, points, width, color) {
+    if (points.length === 0) return
+
+    let fromPoint
+
+    ctx.save()
+    ctx.lineWidth = width * viewBoxManager.scale
+    ctx.strokeStyle = color
+    ctx.lineCap = 'round'
+
+    ctx.beginPath()
+    for(let i = 0; i < points.length; ++i) {
+      let toPoint = points[i]
+
+      if (fromPoint) {
+        ctx.moveTo(fromPoint[0], fromPoint[1])
+        ctx.lineTo(toPoint[0], toPoint[1])
+      }
+
+      fromPoint = toPoint
+    }
+
+    ctx.stroke()
+    ctx.closePath()
+    ctx.restore()
+  }
+
   function DrawToolCursor() {
     let currentPos
     let targetObject
@@ -440,31 +467,7 @@
 
     function draw(ctx, object) {
       const { cmds, width, color } = object
-      if (cmds.length === 0) return
-
-      const points = getPoints(cmds)
-      let fromPoint
-
-      ctx.save()
-      ctx.lineWidth = width * viewBoxManager.scale
-      ctx.strokeStyle = color
-      ctx.lineCap = 'round'
-
-      ctx.beginPath()
-      for(let i = 0; i < points.length; ++i) {
-        let toPoint = points[i]
-
-        if (fromPoint) {
-          ctx.moveTo(fromPoint[0], fromPoint[1])
-          ctx.lineTo(toPoint[0], toPoint[1])
-        }
-
-        fromPoint = toPoint
-      }
-
-      ctx.stroke()
-      ctx.closePath()
-      ctx.restore()
+      drawLine(ctx, getPoints(cmds, width, color))
     }
 
     function save() {
@@ -537,31 +540,7 @@
 
     function draw(ctx, object) {
       const { cmds, width, color } = object
-      if (cmds.length === 0) return
-
-      const points = getPoints(cmds)
-      let fromPoint
-
-      ctx.save()
-      ctx.lineWidth = width * viewBoxManager.scale
-      ctx.strokeStyle = color
-      ctx.lineCap = 'round'
-
-      ctx.beginPath()
-      for(let i = 0; i < points.length; ++i) {
-        let toPoint = points[i]
-
-        if (fromPoint) {
-          ctx.moveTo(fromPoint[0], fromPoint[1])
-          ctx.lineTo(toPoint[0], toPoint[1])
-        }
-
-        fromPoint = toPoint
-      }
-
-      ctx.stroke()
-      ctx.closePath()
-      ctx.restore()
+      drawLine(ctx, getPoints(cmds, width, color))
     }
 
     function save() {
