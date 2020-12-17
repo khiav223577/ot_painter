@@ -251,7 +251,20 @@
     function redraw(ctx, clearCanvas) {
       needRedraw = false
       clearCanvas()
-      objects.forEach(object => drawTools[object.kind].draw(ctx, object))
+      objects.forEach((object) => {
+        const tool = drawTools[object.kind]
+        tool.draw(ctx, object)
+
+        const rect = tool.boundingBox(object)
+        ctx.save()
+        ctx.beginPath()
+        ctx.setLineDash([5, 10])
+        ctx.lineWidth = 2
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3 )'
+        ctx.rect(rect.x, rect.y, rect.w, rect.h);
+        ctx.stroke();
+        ctx.restore()
+      })
     }
 
     function load(object) {
@@ -295,7 +308,7 @@
     function pickTopObjectAt(x, y) {
       for(let i = objects.length - 1; i >= 0; i--) {
         const object = objects[i]
-        const rect = drawTools[object.kind].boundaryRect(object)
+        const rect = drawTools[object.kind].boundingBox(object)
         if (rect.isPointInside(x, y)) return object
       }
 
@@ -463,7 +476,7 @@
         object.cmds[0][1] += diffY
         synchronizer.needRedraw = true
       },
-      boundaryRect: (object) => {
+      boundingBox: (object) => {
         const points = getPoints(object.cmds)
         const xs = _(points).map(point => point[0])
         const ys = _(points).map(point => point[1])
@@ -544,7 +557,7 @@
         object.endPos.y += diffY
         synchronizer.needRedraw = true
       },
-      boundaryRect: (object) => {
+      boundingBox: (object) => {
         const fromPoint = object.cmds[0]
         const toPoint = object.cmds[1]
         const minX = Math.min(fromPoint[0], toPoint[0])
