@@ -525,22 +525,40 @@
       }
     }
 
-    function draw(ctx, object) {
-      const { cmds, width, color } = object
-      if (cmds.length === 0) return
+    function getPoints(cmds) {
+      if (cmds.length === 0) return []
 
       let fromX = (cmds[0][0] - viewBoxManager.x) * viewBoxManager.scale
       let fromY = (cmds[0][1] - viewBoxManager.y) * viewBoxManager.scale
       let toX = (cmds[1][0] - viewBoxManager.x) * viewBoxManager.scale
       let toY = (cmds[1][1] - viewBoxManager.y) * viewBoxManager.scale
+      return [[fromX, fromY], [toX, toY]]
+    }
+
+    function draw(ctx, object) {
+      const { cmds, width, color } = object
+      if (cmds.length === 0) return
+
+      const points = getPoints(cmds)
+      let fromPoint
 
       ctx.save()
       ctx.lineWidth = width * viewBoxManager.scale
       ctx.strokeStyle = color
       ctx.lineCap = 'round'
+
       ctx.beginPath()
-      ctx.moveTo(fromX, fromY)
-      ctx.lineTo(toX, toY)
+      for(let i = 0; i < points.length; ++i) {
+        let toPoint = points[i]
+
+        if (fromPoint) {
+          ctx.moveTo(fromPoint[0], fromPoint[1])
+          ctx.lineTo(toPoint[0], toPoint[1])
+        }
+
+        fromPoint = toPoint
+      }
+
       ctx.stroke()
       ctx.closePath()
       ctx.restore()
@@ -553,20 +571,21 @@
     return {
       kind,
       draw,
-      addXY(diffX, diffY) {
-        object.startPos.x += diffX
-        object.startPos.y += diffY
-        object.endPos.x += diffX
-        object.endPos.y += diffY
+      addXY(object, diffX, diffY) {
+        object.cmds[0][0] += diffX
+        object.cmds[0][1] += diffY
+        object.cmds[1][0] += diffX
+        object.cmds[1][1] += diffY
         synchronizer.needRedraw = true
       },
       boundingBox: (object) => {
-        const fromPoint = object.cmds[0]
-        const toPoint = object.cmds[1]
-        const minX = Math.min(fromPoint[0], toPoint[0])
-        const maxX = Math.max(fromPoint[0], toPoint[0])
-        const minY = Math.min(fromPoint[1], toPoint[1])
-        const maxY = Math.max(fromPoint[1], toPoint[1])
+        const points = getPoints(object.cmds)
+        const xs = _(points).map(point => point[0])
+        const ys = _(points).map(point => point[1])
+        const minX = xs.min()
+        const maxX = xs.max()
+        const minY = ys.min()
+        const maxY = ys.max()
         return Rect(minX, minY, maxX - minX, maxY - minY)
       },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
