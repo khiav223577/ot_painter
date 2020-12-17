@@ -16,6 +16,7 @@ class PaintersController < ActionController::Base
 
     object = params[:object].slice(:kind, :cmds, :version, :width, :color)
     object['id'] = $objects.size + 1
+    object['width'] = object['width'].to_i if object['width'].is_a?(String)
 
     $objects << object
 

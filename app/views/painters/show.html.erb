@@ -504,7 +504,12 @@
         const maxX = xs.max()
         const minY = ys.min()
         const maxY = ys.max()
-        return Rect(minX, minY, maxX - minX, maxY - minY)
+        return Rect(
+          minX - object.width / 2,
+          minY - object.width / 2,
+          maxX - minX + object.width,
+          maxY - minY + object.width,
+        )
       },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         currentPos = cursorPos
@@ -581,7 +586,12 @@
         const maxX = xs.max()
         const minY = ys.min()
         const maxY = ys.max()
-        return Rect(minX, minY, maxX - minX, maxY - minY)
+        return Rect(
+          minX - object.width / 2,
+          minY - object.width / 2,
+          maxX - minX + object.width,
+          maxY - minY + object.width,
+        )
       },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         startPos = cursorPos
