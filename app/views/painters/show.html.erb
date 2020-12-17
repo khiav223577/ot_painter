@@ -374,7 +374,10 @@
         prevDiffX = 0
         prevDiffY = 0
         currentPos = cursorPos
-        targetObject = synchronizer.pickTopObjectAt(cursorPos.x, cursorPos.y)
+        targetObject = synchronizer.pickTopObjectAt(
+          (cursorPos.x - viewBoxManager.x) * viewBoxManager.scale,
+          (cursorPos.y - viewBoxManager.y) * viewBoxManager.scale
+        )
       },
       onMouseMove: (_ctx, cursorPos, _clearCanvas) => {
         const diffX = cursorPos.x - currentPos.x
