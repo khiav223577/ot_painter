@@ -481,7 +481,7 @@
 
     function draw(ctx, object) {
       const { cmds, width, color } = object
-      drawLine(ctx, getPoints(cmds, width, color))
+      drawLine(ctx, getPoints(cmds), width, color)
     }
 
     function save() {
@@ -556,7 +556,7 @@
 
     function draw(ctx, object) {
       const { cmds, width, color } = object
-      drawLine(ctx, getPoints(cmds, width, color))
+      drawLine(ctx, getPoints(cmds), width, color)
     }
 
     function save() {
