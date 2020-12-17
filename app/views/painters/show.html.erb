@@ -230,6 +230,18 @@
     )
   }
 
+  function Rect(x, y, w, h) {
+    function isPointInside(tx, ty) {
+      if (tx < x) return false
+      if (ty < y) return false
+      if (tx > x + w) return false
+      if (ty > y + h) return false
+      return true
+    }
+
+    return { x, y, w, h, isPointInside }
+  }
+
   const synchronizer = new function() {
     let objects = []
     let maxID = -1
@@ -280,10 +292,21 @@
       })
     }
 
+    function pickTopObjectAt(x, y) {
+      for(let i = objects.length - 1; i >= 0; i--) {
+        const object = objects[i]
+        const rect = drawTools[object.kind].boundaryRect(object)
+        if (rect.isPointInside(x, y)) return object
+      }
+
+      return null
+    }
+
     return {
       save,
       load,
       redraw,
+      pickTopObjectAt,
       set needRedraw(flag) { needRedraw = flag },
       get needRedraw() { return needRedraw },
     }
@@ -327,6 +350,7 @@
 
   function DrawToolCursor() {
     let currentPos
+    let targetObject
     const kind = KIND_CURSOR
     let prevDiffX = 0, prevDiffY = 0
 
@@ -334,19 +358,28 @@
       kind,
       draw: null,
       onMouseDown: (_ctx, cursorPos, _lineWidth, _color) => {
+        prevDiffX = 0
+        prevDiffY = 0
         currentPos = cursorPos
+        targetObject = synchronizer.pickTopObjectAt(cursorPos.x, cursorPos.y)
       },
       onMouseMove: (_ctx, cursorPos, _clearCanvas) => {
         const diffX = cursorPos.x - currentPos.x
         const diffY = cursorPos.y - currentPos.y
         if (diffX === 0 && diffY === 0) return
 
-        viewBoxManager.addXY(-prevDiffX - diffX, -prevDiffY - diffY)
+        if (targetObject) {
+          drawTools[targetObject.kind].addXY(targetObject, -prevDiffX + diffX, -prevDiffY + diffY)
+        } else {
+          viewBoxManager.addXY(-diffX, -diffY)
+        }
+
         prevDiffX = diffX
-        prevDiffX = diffY
+        prevDiffY = diffY
       },
       onMouseUp: (_ctx, _cursorPos) => {
         currentPos = null
+        targetObject = null
       },
     }
   }
@@ -425,6 +458,21 @@
     return {
       kind,
       draw,
+      addXY(object, diffX, diffY) {
+        object.cmds[0][0] += diffX
+        object.cmds[0][1] += diffY
+        synchronizer.needRedraw = true
+      },
+      boundaryRect: (object) => {
+        const points = getPoints(object.cmds)
+        const xs = _(points).map(point => point[0])
+        const ys = _(points).map(point => point[1])
+        const minX = xs.min()
+        const maxX = xs.max()
+        const minY = ys.min()
+        const maxY = ys.max()
+        return Rect(minX, minY, maxX - minX, maxY - minY)
+      },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         currentPos = cursorPos
         currentLineWidth = lineWidth
@@ -489,6 +537,22 @@
     return {
       kind,
       draw,
+      addXY(diffX, diffY) {
+        object.startPos.x += diffX
+        object.startPos.y += diffY
+        object.endPos.x += diffX
+        object.endPos.y += diffY
+        synchronizer.needRedraw = true
+      },
+      boundaryRect: (object) => {
+        const fromPoint = object.cmds[0]
+        const toPoint = object.cmds[1]
+        const minX = Math.min(fromPoint[0], toPoint[0])
+        const maxX = Math.max(fromPoint[0], toPoint[0])
+        const minY = Math.min(fromPoint[1], toPoint[1])
+        const maxY = Math.max(fromPoint[1], toPoint[1])
+        return Rect(minX, minY, maxX - minX, maxY - minY)
+      },
       onMouseDown: (ctx, cursorPos, lineWidth, color) => {
         startPos = cursorPos
         endPos = null
