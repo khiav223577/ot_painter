@@ -693,6 +693,7 @@
     }
 
     function onMouseDown(e) {
+      if (e.button !== 0) return // not left click
       if (drawingToolRef.current) return
       drawingToolRef.current = drawTools[drawKindRef.current]
       drawingToolRef.current.onMouseDown(getCtx2(), calculatePos(e), lineWidthRef.current, lineColorRef.current)
