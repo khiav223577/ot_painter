@@ -16,8 +16,6 @@
     )
   })()
 
-  window.addEventListener('wheel', e => e.preventDefault(), { passive: false }) // Fix passive event listener in chrome
-
   function useWindowDimensions() {
     const hasWindow = typeof window !== 'undefined'
 
@@ -659,12 +657,11 @@
     }, [])
 
     React.useEffect(() => {
-      const $window = $(window)
-      $window.mousewheel(onMouseWheel)
       window.addEventListener('mouseup', onMouseUp)
+      window.addEventListener('wheel', onMouseWheel, { passive: false })  // Fix passive event listener in chrome
       window.addEventListener('mousemove', onMouseMove)
       return () => {
-        $window.off('mousewheel', onMouseWheel)
+        window.removeEventListener('wheel', onMouseWheel)
         window.removeEventListener('mouseup', onMouseUp)
         window.removeEventListener('mousemove', onMouseMove)
       }
@@ -720,12 +717,12 @@
         if (event.deltaY === 0) return
 
         viewBoxManager.applyScale(
-          event.deltaY > 0,
+          event.deltaY < 0,
           event.clientX - canvas2BBoxRef.current.x,
           event.clientY - canvas2BBoxRef.current.y
         )
       } else {
-        viewBoxManager.addXY(event.deltaX / viewBoxManager.scale, -event.deltaY / viewBoxManager.scale)
+        viewBoxManager.addXY(event.deltaX / viewBoxManager.scale, event.deltaY / viewBoxManager.scale)
       }
 
       event.preventDefault()
