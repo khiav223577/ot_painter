@@ -243,6 +243,21 @@
     return { x, y, w, h, isPointInside }
   }
 
+  function getBoundingBoxFromPoints(points, padding) {
+    const xs = _(points).map(point => point[0])
+    const ys = _(points).map(point => point[1])
+    const minX = xs.min()
+    const maxX = xs.max()
+    const minY = ys.min()
+    const maxY = ys.max()
+    return Rect(
+      minX - padding,
+      minY - padding,
+      maxX - minX + padding * 2,
+      maxY - minY + padding * 2,
+    )
+  }
+
   const synchronizer = new function() {
     let objects = []
     let maxID = -1
@@ -517,28 +532,16 @@
         object.cmds[0][1] += diffY
         synchronizer.needRedraw = true
       },
-      boundingBox: (object) => {
-        const points = getPoints(object.cmds)
-        const xs = _(points).map(point => point[0])
-        const ys = _(points).map(point => point[1])
-        const minX = xs.min()
-        const maxX = xs.max()
-        const minY = ys.min()
-        const maxY = ys.max()
-        return Rect(
-          minX - object.width / 2,
-          minY - object.width / 2,
-          maxX - minX + object.width,
-          maxY - minY + object.width,
-        )
+      boundingBox(object) {
+        return getBoundingBoxFromPoints(getPoints(object.cmds), object.width / 2)
       },
-      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+      onMouseDown(ctx, cursorPos, lineWidth, color) {
         currentPos = cursorPos
         currentLineWidth = lineWidth
         currentColor = color
         cmds.push([cursorPos.x, cursorPos.y])
       },
-      onMouseMove: (ctx, cursorPos, _clearCanvas) => {
+      onMouseMove(ctx, cursorPos, _clearCanvas) {
         const diffX = cursorPos.x - currentPos.x
         const diffY = cursorPos.y - currentPos.y
         if (diffX === 0 && diffY === 0) return
@@ -547,7 +550,7 @@
         draw(ctx, serialize([[currentPos.x, currentPos.y], [diffX, diffY]]))
         currentPos = cursorPos
       },
-      onMouseUp: (_ctx, _cursorPos) => {
+      onMouseUp(_ctx, _cursorPos) {
         save()
       },
       onToolChange() {
@@ -599,28 +602,16 @@
         object.cmds[1][1] += diffY
         synchronizer.needRedraw = true
       },
-      boundingBox: (object) => {
-        const points = getPoints(object.cmds)
-        const xs = _(points).map(point => point[0])
-        const ys = _(points).map(point => point[1])
-        const minX = xs.min()
-        const maxX = xs.max()
-        const minY = ys.min()
-        const maxY = ys.max()
-        return Rect(
-          minX - object.width / 2,
-          minY - object.width / 2,
-          maxX - minX + object.width,
-          maxY - minY + object.width,
-        )
+      boundingBox(object) {
+        return getBoundingBoxFromPoints(getPoints(object.cmds), object.width / 2)
       },
-      onMouseDown: (ctx, cursorPos, lineWidth, color) => {
+      onMouseDown(ctx, cursorPos, lineWidth, color) {
         startPos = cursorPos
         endPos = null
         currentLineWidth = lineWidth
         currentColor = color
       },
-      onMouseMove: (ctx, cursorPos, clearCanvas) => {
+      onMouseMove(ctx, cursorPos, clearCanvas) {
         const diffX = cursorPos.x - startPos.x
         const diffY = cursorPos.y - startPos.y
         if (diffX === 0 && diffY === 0) return
@@ -629,7 +620,7 @@
         clearCanvas()
         draw(ctx, serialize())
       },
-      onMouseUp: (_ctx, _cursorPos) => {
+      onMouseUp(_ctx, _cursorPos) {
         if (endPos == null) return
         save()
       },
