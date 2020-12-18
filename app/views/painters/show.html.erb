@@ -661,7 +661,7 @@
     React.useEffect(() => {
       const $window = $(window)
       $window.mousewheel(onMouseWheel)
-      window.addEventListener('wheel', onMouseWheel)
+      window.addEventListener('mouseup', onMouseUp)
       window.addEventListener('mousemove', onMouseMove)
       return () => {
         $window.off('mousewheel', onMouseWheel)
