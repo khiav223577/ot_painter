@@ -672,8 +672,19 @@
     React.useEffect(() => {
       const $window = $(window)
       $window.mousewheel(onMouseWheel)
-      return () => { $window.off('mousewheel', onMouseWheel) }
+      window.addEventListener('wheel', onMouseWheel)
+      window.addEventListener('mousemove', onMouseMove)
+      return () => {
+        $window.off('mousewheel', onMouseWheel)
+        window.removeEventListener('mouseup', onMouseUp)
+        window.removeEventListener('mousemove', onMouseMove)
+      }
     }, [])
+
+    React.useEffect(() => {
+      window.addEventListener('mouseup', onMouseUp)
+      return () => { window.removeEventListener('mouseup', onMouseUp) }
+    })
 
     React.useEffect(() => {
       const redrawLoop = new AnimFrameLooper(1000 / 60)
@@ -751,8 +762,6 @@
             style={ { position: 'absolute' } }
             ref={canvas1Ref}
             onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
           />
           <canvas
             width={windowWidth}
@@ -760,8 +769,6 @@
             style={ { position: 'absolute' } }
             ref={canvas2Ref}
             onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
           />
         </div>
         <div style={ { position: 'fixed', backgroundColor: '#f5f5f5', padding: 10 } }>
