@@ -8,6 +8,13 @@ class PaintersController < ActionController::Base
 
     respond_to do |format|
       format.html
+      format.json {
+        render json: {
+          data: {
+            objects: $objects,
+          },
+        }
+      }
     end
   end
 
