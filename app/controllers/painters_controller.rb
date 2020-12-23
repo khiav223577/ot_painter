@@ -57,7 +57,7 @@ class PaintersController < ActionController::Base
     return render json: { data: {} } if object == nil
 
     available_attrs = KIND_TO_ATTRIBUTES[object['kind']]
-    object.merge!(params[:object].slice(available_attrs).permit!)
+    object.merge!(params[:object].slice(*available_attrs).permit!)
 
     ActionCable.server.broadcast(
       'painter_channel',
