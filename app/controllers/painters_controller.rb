@@ -1,6 +1,12 @@
 class PaintersController < ActionController::Base
   skip_before_action :verify_authenticity_token
 
+  KIND_TO_ATTRIBUTES = {
+    'line'        => [:cmds, :width, :color, :version].freeze,
+    'pencil'      => [:cmds, :width, :color, :version].freeze,
+    'sticky_note' => [:text, :sx, :sy, :width, :height, :color, :version].freeze,
+  }.freeze
+
   $objects = []
 
   def show
@@ -21,7 +27,10 @@ class PaintersController < ActionController::Base
   def create
     return render_error('invalid params') if params[:object] == nil
 
-    object = params[:object].slice(:kind, :cmds, :version, :width, :color)
+    available_attrs = KIND_TO_ATTRIBUTES[params[:object][:kind]]
+    return render_error('invalid kind') if available_attrs == nil
+
+    object = params[:object].slice(:kind, *available_attrs)
     object['id'] = $objects.size + 1
     object['width'] = object['width'].to_i if object['width'].is_a?(String)
 
@@ -46,7 +55,8 @@ class PaintersController < ActionController::Base
     object = $objects[id - 1]
     return render json: { data: {} } if object == nil
 
-    object.merge!(params[:object].slice(:cmds, :version, :width, :color).permit!)
+    available_attrs = KIND_TO_ATTRIBUTES[object['kind']]
+    object.merge!(params[:object].slice(available_attrs).permit!)
 
     ActionCable.server.broadcast(
       'painter_channel',
