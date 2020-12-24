@@ -4,7 +4,7 @@ class PaintersController < ActionController::Base
   KIND_TO_ATTRIBUTES = {
     'line'         => [:cmds, :width, :color, :version].freeze,
     'pencil'       => [:cmds, :width, :color, :version].freeze,
-    'rounded_rect' => [:sx, :sy, :width, :height, :color, :version].freeze,
+    'rounded_rect' => [:sx, :sy, :width, :height, :color, :radius, :version].freeze,
     'sticky_note'  => [:text, :sx, :sy, :width, :height, :color, :version].freeze,
   }.freeze
 
