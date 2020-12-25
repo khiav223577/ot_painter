@@ -5,7 +5,7 @@ class PaintersController < ActionController::Base
     'line'         => [:cmds, :width, :color, :version].freeze,
     'pencil'       => [:cmds, :width, :color, :version].freeze,
     'rounded_rect' => [:sx, :sy, :width, :height, :color, :radius, :version].freeze,
-    'sticky_note'  => [:text, :sx, :sy, :width, :height, :color, :version].freeze,
+    'sticky_note'  => [:text, :sx, :sy, :width, :height, :color, :font_size, :version].freeze,
   }.freeze
 
   $objects = []
