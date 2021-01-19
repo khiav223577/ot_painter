@@ -1,11 +1,12 @@
 class PaintersController < ActionController::Base
   skip_before_action :verify_authenticity_token
 
+  COMMON_ATTRIBUTES = [:deleted_at, :version].freeze
   KIND_TO_ATTRIBUTES = {
-    'line'         => [:cmds, :line_width, :color, :version].freeze,
-    'pencil'       => [:cmds, :line_width, :color, :version].freeze,
-    'rounded_rect' => [:sx, :sy, :width, :height, :color, :radius, :version].freeze,
-    'sticky_note'  => [:text, :sx, :sy, :width, :height, :color, :font_size, :version].freeze,
+    'line'         => [:cmds, :line_width, :color, *COMMON_ATTRIBUTES].freeze,
+    'pencil'       => [:cmds, :line_width, :color, *COMMON_ATTRIBUTES].freeze,
+    'rounded_rect' => [:sx, :sy, :width, :height, :color, :radius, *COMMON_ATTRIBUTES].freeze,
+    'sticky_note'  => [:text, :sx, :sy, :width, :height, :color, :font_size, *COMMON_ATTRIBUTES].freeze,
   }.freeze
 
   $objects = []
